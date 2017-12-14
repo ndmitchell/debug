@@ -1,0 +1,51 @@
+cabal-version:      >= 1.18
+build-type:         Simple
+name:               debug
+version:            0.0
+license:            BSD3
+license-file:       LICENSE
+category:           Development, Debugging
+author:             Neil Mitchell <ndmitchell@gmail.com>
+maintainer:         Neil Mitchell <ndmitchell@gmail.com>
+copyright:          Neil Mitchell 2017
+synopsis:           Debugging made easy
+description:
+    Easy debugging
+homepage:           https://github.com/ndmitchell/debug
+bug-reports:        https://github.com/ndmitchell/debug/issues
+tested-with:        GHC==8.2.1, GHC==8.0.2, GHC==7.10.3, GHC==7.8.4, GHC==7.6.3, GHC==7.4.2
+extra-doc-files:
+    CHANGES.txt
+    README.md
+
+data-files:
+    html/debug.html
+    html/debug.js
+
+source-repository head
+    type:     git
+    location: https://github.com/ndmitchell/debug.git
+
+library
+    default-language: Haskell2010
+    hs-source-dirs:   src
+    build-depends:
+        base == 4.*,
+        js-jquery
+
+    exposed-modules:
+        Debug
+        Debug.Record
+
+    other-modules:
+        Debug.Variables
+
+test-suite debug-test
+    default-language: Haskell2010
+    type: exitcode-stdio-1.0
+    main-is: Test.hs
+    hs-source-dirs: test
+
+    build-depends:
+        base == 4.*,
+        debug

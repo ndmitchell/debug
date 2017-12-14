@@ -1,0 +1,61 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <title>Debug</title>
+        <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+        <script src="trace.js"></script>
+        <script src="debug.js"></script>
+<style type="text/css">
+body {height: 100%;}
+h1, h2, ul {font-family: sans-serif;}
+h1 {margin-bottom: 5px;}
+ul {font-size: 10pt;}
+h1 {font-size: 20pt; background-color: #d3d3d3; margin-top: 0; padding: 5px;}
+#function-list a {text-decoration: none;}
+h2 {margin-top: 0; margin-bottom: 5px; font-size: 12pt;}
+td {vertical-align: top;}
+abbr {text-decoration: none;}
+
+.hs-keyglyph {color: red;}
+.hs-keyword {color: blue;}
+.hs-comment {color: green;}
+.hs-str, .hs-chr {color: teal;}
+</style>
+    </head>
+    <body>
+
+<table style="height:100%;width:100%;">
+    <tr>
+        <td colspan="3">
+            <h1>Haskell Debugger</h1>
+        </td>
+    </tr>
+    <tr>
+        <td rowspan="2" width="25%" style="padding-right:40px;">
+            <h2>Functions</h1>
+            <select id="function-drop" style="width:100%;"><option>(All)</option></select><br/>
+            <input id="function-text" style="margin-top:5px;width:100%;" type="text" placeholder="Filter (using regex)" />
+            <ul id="function-list"></ul>
+        </td>
+        <td>
+            <h2>Source</h2>
+            <pre id="function-source"></pre>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <h2>Variables</h2>
+            <ul id="function-variables"></ul>
+        </td>
+        <td>
+            <!--
+            <h2>Calls</h2>
+            Call stack
+            -->
+        </td>
+    </tr>
+</table>
+
+
+    </body>
+</html>
