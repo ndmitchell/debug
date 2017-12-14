@@ -1,12 +1,15 @@
 {-# LANGUAGE MagicHash #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+    -- Any moved from GHC.Prim to GHC.Types
+    -- so import both and use unused imports to get compatibility
 
 module Debug.Variables(
     Var, varId, varShow,
     Variables, listVariables, newVariables, addVariable
     ) where
 
-import GHC.Types(Any)
-import GHC.Prim(tagToEnum#, reallyUnsafePtrEquality#)
+import GHC.Types
+import GHC.Prim
 import Data.List.Extra
 import Control.Exception
 import System.IO.Unsafe
