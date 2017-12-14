@@ -15,7 +15,7 @@ debug [d|
 
     partition               :: (a -> Bool) -> [a] -> ([a],[a])
     {-# INLINE partition #-}
-    partition p = foldr (select p) ([],[])
+    partition p xs = foldr (select p) ([],[]) xs
 
     select :: (a -> Bool) -> a -> ([a], [a]) -> ([a], [a])
     select p x ~(ts,fs) | p x       = (x:ts,fs)
