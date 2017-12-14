@@ -5,8 +5,8 @@ module Debug.Variables(
     Variables, listVariables, newVariables, addVariable
     ) where
 
-import GHC.Prim
 import GHC.Types
+import GHC.Prim
 import Data.List.Extra
 import Control.Exception
 import System.IO.Unsafe
