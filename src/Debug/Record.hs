@@ -3,7 +3,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-} -- Dodgy Show instance, useful for debugging
 
 module Debug.Record(
-    debugClear, debugConsole, debugJS,
+    debugClear,
+    debugConsole, debugJS, debugHTML,
     Function(..),
     Call,
     funInfo, fun, var
@@ -16,6 +17,9 @@ import Data.List.Extra
 import System.IO.Unsafe
 import Text.Show.Functions() -- Make sure the Show for functions instance exists
 import qualified Data.Map as Map
+import qualified Language.Javascript.JQuery as JQuery
+import Paths_debug
+
 
 
 data Function = Function
@@ -76,6 +80,19 @@ debugJS = do
         jsonList (x:xs) = unlines $ ("  [" ++ x) : map ("  ," ++) xs ++ ["  ]"]
         jsonMap xs = "{" ++ intercalate "," [jsonString k ++ ":" ++ v | (k,v) <- xs] ++ "}"
         jsonString = show
+
+debugHTML :: IO String
+debugHTML = do
+    html <- readFile =<< getDataFileName "html/debug.html"
+    debug <- readFile =<< getDataFileName "html/debug.js"
+    jquery <- readFile =<< JQuery.file
+    trace <- debugJS
+    let script a = "<script>\n" ++ a ++ "\n</script>"
+    let f x | "trace.js" `isInfixOf` x = script trace
+            | "debug.js" `isInfixOf` x = script debug
+            | "code.jquery.com/jquery" `isInfixOf` x = script jquery
+            | otherwise = x
+    return $ unlines $ map f $ lines html
 
 
 instance {-# OVERLAPS #-} Show a where

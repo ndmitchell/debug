@@ -44,6 +44,7 @@ library
 
     other-modules:
         Debug.Variables
+        Paths_debug
 
 test-suite debug-test
     default-language: Haskell2010
