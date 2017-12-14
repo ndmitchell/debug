@@ -1,6 +1,16 @@
 var hsLexer = /[a-zA-Z][a-zA-Z0-9]+|[\r\n]|./;
 var symbols = "->:=()[]";
 
+function escapeHTML(x)
+{
+    return x
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+}
+
 function showCall(i)
 {
     var t = traceCalls[i];
@@ -20,9 +30,9 @@ function showCall(i)
             if (res[0] == "where")
                 $source.append("<span class='hs-keyword'>where</a>");
             else if (symbols.indexOf(res[0]) != -1)
-                $source.append("<span class='hs-keyglyph'>" + res[0] + "</a>");
+                $source.append("<span class='hs-keyglyph'>" + escapeHTML(res[0]) + "</a>");
             else if (res[0] in t)
-                $source.append("<abbr title='" + traceVariables[t[res[0]]] + "'>" + res[0] + "</abbr>");
+                $source.append("<abbr title='" + escapeHTML(traceVariables[t[res[0]]]) + "'>" + escapeHTML(res[0]) + "</abbr>");
             else
                 $source.append(res[0]);
             source = source.substr(res[0].length);
@@ -37,7 +47,7 @@ function showCall(i)
     }
     variables = variables.sort();
     for (var i = 0; i < variables.length; i++)
-        $("#function-variables").append($("<li>" + variables[i] + "</li>"));
+        $("#function-variables").append($("<li>" + escapeHTML(variables[i]) + "</li>"));
 }
 
 function showCalls()
@@ -70,7 +80,7 @@ function showCalls()
         words.push(traceVariables[t[inf.result]]);
         var msg = words.join(" ");
         if (!regex.test(msg)) continue;
-        ul.append($("<li><a href='javascript:showCall(" + i + ")'>" + msg + "</a></li>"));
+        ul.append($("<li><a href='javascript:showCall(" + i + ")'>" + escapeHTML(msg) + "</a></li>"));
     }
 }
 
@@ -82,7 +92,7 @@ function init()
     funcNames = funcNames.sort();
     var drop = $("#function-drop");
     for (var i = 0; i < funcNames.length; i++)
-        drop.append($("<option>" + funcNames[i] + "</option>"));
+        drop.append($("<option>" + escapeHTML(funcNames[i]) + "</option>"));
 
     $("#function-drop").change(showCalls);
     $("#function-text").change(showCalls).on("input", showCalls);
