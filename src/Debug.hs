@@ -1,8 +1,54 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE LambdaCase #-}
 
+-- | Module for debugging Haskell programs. To use, take the functions that
+--   you are interested in debugging, e.g.:
+--
+-- > module QuickSort(quicksort) where
+-- > import Data.List
+-- >
+-- > quicksort :: Ord a => [a] -> [a]
+-- > quicksort [] = []
+-- > quicksort (x:xs) = quicksort lt ++ [x] ++ quicksort gt
+-- >     where (lt, gt) = partition (<= x) xs
+--
+--   Turn on the @TemplateHaskell@ and @ViewPatterns@ extensions, import "Debug",
+--   indent your code and place it under a call to 'debug', e.g.:
+--
+-- > {-# LANGUAGE TemplateHaskell, ViewPatterns #-}
+-- > module QuickSort(quicksort) where
+-- > import Data.List
+-- > import Debug
+-- >
+-- > debug [d|
+-- >    quicksort :: Ord a => [a] -> [a]
+-- >    quicksort [] = []
+-- >    quicksort (x:xs) = quicksort lt ++ [x] ++ quicksort gt
+-- >        where (lt, gt) = partition (<= x) xs
+-- >    |]
+--
+--   We can now run our debugger with:
+--
+-- > $ ghci QuickSort.hs
+-- > GHCi, version 8.2.1: http://www.haskell.org/ghc/  :? for help
+-- > [1 of 1] Compiling QuickSort        ( QuickSort.hs, interpreted )
+-- > Ok, 1 module loaded.
+-- > *QuickSort> quicksort "haskell"
+-- > "aehklls"
+-- > *QuickSort> debugView
+--
+--   The final call to 'debugView' starts a web browser to view the recorded information.
+--   Alternatively call 'debugSave' to write the web page to a known location.
+--
+--   For more ways to view the result (e.g. producing JSON) or record traces (without using
+--   @TemplateHaskell@) see "Debug.Record".
 module Debug(
-    debug
+    -- * Generate trace
+    debug,
+    -- * View a trace
+    debugView, debugSave,
+    -- * Clear a trace
+    debugClear,
     ) where
 
 import Debug.Record
@@ -13,6 +59,8 @@ import Language.Haskell.TH.Syntax
 import Data.Generics.Uniplate.Data
 
 
+-- | A @TemplateHaskell@ wrapper to convert a normal function into a traced function.
+--   For an example see "Debug". Inserts 'funInfo' and 'var' calls.
 debug :: Q [Dec] -> Q [Dec]
 debug q = do
     decs <- q

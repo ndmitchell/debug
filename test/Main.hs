@@ -32,7 +32,8 @@ main = do
     _ <- return ()
     debugClear
     print $ quicksort (<) "neil"
-    debugConsole
-    writeFile "trace.js" =<< debugJS
-    writeFile "trace.html" =<< debugHTML
+    debugPrint
+    writeFile "trace.js" =<< debugJSON
+    debugSave "trace.html"
+    debugView
     print $ quicksort' "neil"
