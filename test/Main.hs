@@ -8,8 +8,8 @@ import Debug
 import Debug.Record
 
 debug [d|
-    quicksort :: (a -> a -> Bool) -> [a] -> [a]  
-    quicksort op [] = []  
+    quicksort :: (a -> a -> Bool) -> [a] -> [a]
+    quicksort op [] = []
     quicksort op (x:xs) = quicksort op lt ++ [x] ++ quicksort op gt
         where (lt, gt) = partition (op x) xs
 
