@@ -91,9 +91,10 @@ debugJSON = do
         vars <- readIORef vars
         return $ jsonMap $ ("", show $ infoId Map.! info) : [(k, show $ varId v) | (k, v) <- reverse vars]
     return $
-        "var traceFunctions =\n" ++ jsonList funs ++
-        "var traceVariables =\n" ++ jsonList vars ++
-        "var traceCalls =\n" ++ jsonList (nubOrd calls)
+        "{\"functions\":\n" ++ jsonList funs ++
+        ",\"variables\":\n" ++ jsonList vars ++
+        ",\"calls\":\n" ++ jsonList (nubOrd calls) ++
+        "}"
     where
         jsonList [] = "  []"
         jsonList (x:xs) = unlines $ ("  [" ++ x) : map ("  ," ++) xs ++ ["  ]"]
@@ -102,7 +103,17 @@ debugJSON = do
 
 -- | Save information about observed functions to the specified file, in HTML format.
 debugSave :: FilePath -> IO ()
-debugSave file = writeFile file =<< debugHTML
+debugSave file = do
+    html <- readFile =<< getDataFileName "html/debug.html"
+    debug <- readFile =<< getDataFileName "html/debug.js"
+    jquery <- readFile =<< JQuery.file
+    trace <- debugJSON
+    let script a = "<script>\n" ++ a ++ "\n</script>"
+    let f x | "trace.js" `isInfixOf` x = script ("var trace =\n" ++ trace ++ ";")
+            | "debug.js" `isInfixOf` x = script debug
+            | "code.jquery.com/jquery" `isInfixOf` x = script jquery
+            | otherwise = x
+    writeFile file $ unlines $ map f $ lines html
 
 -- | Open a web browser showing information about observed functions.
 debugView :: IO ()
@@ -115,18 +126,6 @@ debugView = do
     debugSave file
     system_ file
 
-debugHTML :: IO String
-debugHTML = do
-    html <- readFile =<< getDataFileName "html/debug.html"
-    debug <- readFile =<< getDataFileName "html/debug.js"
-    jquery <- readFile =<< JQuery.file
-    trace <- debugJSON
-    let script a = "<script>\n" ++ a ++ "\n</script>"
-    let f x | "trace.js" `isInfixOf` x = script trace
-            | "debug.js" `isInfixOf` x = script debug
-            | "code.jquery.com/jquery" `isInfixOf` x = script jquery
-            | otherwise = x
-    return $ unlines $ map f $ lines html
 
 #if __GLASGOW_HASKELL__ >= 800
 -- On older GHC's this level of overlap leads to a compile error

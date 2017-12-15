@@ -13,8 +13,8 @@ function escapeHTML(x)
 
 function showCall(i)
 {
-    var t = traceCalls[i];
-    var inf = traceFunctions[t[""]];
+    var t = trace.calls[i];
+    var inf = trace.functions[t[""]];
     $source = $("#function-source").empty();
     var source = inf.source;
     while (source != "")
@@ -32,7 +32,7 @@ function showCall(i)
             else if (symbols.indexOf(res[0]) != -1)
                 $source.append("<span class='hs-keyglyph'>" + escapeHTML(res[0]) + "</a>");
             else if (res[0] in t)
-                $source.append("<abbr title='" + escapeHTML(traceVariables[t[res[0]]]) + "'>" + escapeHTML(res[0]) + "</abbr>");
+                $source.append("<abbr title='" + escapeHTML(trace.variables[t[res[0]]]) + "'>" + escapeHTML(res[0]) + "</abbr>");
             else
                 $source.append(res[0]);
             source = source.substr(res[0].length);
@@ -43,7 +43,7 @@ function showCall(i)
     for (var s in t)
     {
         if (s == "") continue;
-        variables.push(s + " = " + traceVariables[t[s]]);
+        variables.push(s + " = " + trace.variables[t[s]]);
     }
     variables = variables.sort();
     for (var i = 0; i < variables.length; i++)
@@ -61,10 +61,10 @@ function showCalls()
     }
 
     var ul = $("#function-list").empty();
-    for (var i = 0; i < traceCalls.length; i++)
+    for (var i = 0; i < trace.calls.length; i++)
     {
-        var t = traceCalls[i];
-        var inf = traceFunctions[t[""]];
+        var t = trace.calls[i];
+        var inf = trace.functions[t[""]];
         if (name != "(All)" && name != inf.name) continue;
         var words = [];
         words.push(inf.name);
@@ -72,12 +72,12 @@ function showCalls()
         {
             var v = inf.arguments[j];
             if (v in t)
-                words.push(traceVariables[t[v]]);
+                words.push(trace.variables[t[v]]);
             else
                 words.push("_");
         }
         words.push("=");
-        words.push(traceVariables[t[inf.result]]);
+        words.push(trace.variables[t[inf.result]]);
         var msg = words.join(" ");
         if (!regex.test(msg)) continue;
         ul.append($("<li><a href='javascript:showCall(" + i + ")'>" + escapeHTML(msg) + "</a></li>"));
@@ -87,8 +87,8 @@ function showCalls()
 function init()
 {
     var funcNames = [];
-    for (var i = 0; i < traceFunctions.length; i++)
-        funcNames.push(traceFunctions[i].name);
+    for (var i = 0; i < trace.functions.length; i++)
+        funcNames.push(trace.functions[i].name);
     funcNames = funcNames.sort();
     var drop = $("#function-drop");
     for (var i = 0; i < funcNames.length; i++)

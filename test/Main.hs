@@ -33,7 +33,6 @@ main = do
     debugClear
     print $ quicksort (<) "neil"
     debugPrint
-    writeFile "trace.js" =<< debugJSON
+    writeFile "trace.js" . ("var trace =\n" ++) . (++ ";") =<< debugJSON
     debugSave "trace.html"
-    debugView
     print $ quicksort' "neil"
