@@ -49,6 +49,15 @@ The call to `debugView` starts a web browser to view the recorded information, l
 This tool is quite new, so it has both limitations, places it is incomplete and bugs. Some notable issues:
 
 * It calls `show` on all the values in encounters, meaning they must all have a `Show` instance (it defines a global `Show` instance which should get used as a fallback), and they will be fully evaluated. If your program relies on laziness it probably won't work.
-* It doesn't really understand shadowed variables, so it will work, but the functions are a bit off.
+* It doesn't really understand shadowed variables, so it will work, but the debug results will be lower quality.
 * For function values it won't give you a whole lot of information.
 
+**Alternatives**
+
+For practical alternatives for debugging Haskell programs you may wish to consider:
+
+* [GHCi debugger](https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/ghci.html#the-ghci-debugger), simple imperative-style debugger in which you can stop a running computation in order to examine the values of variables. The debugger is integrated into GHCi. Robust, reliable, somewhat difficult to use.
+* [Hood](https://hackage.haskell.org/package/hood) and [Hoed](https://hackage.haskell.org/package/Hoed), a value-based observational debugger with a difficult user interface, deals well with laziness.
+* [Hat](https://hackage.haskell.org/package/hat), good ideas, but I've never got it working.
+
+Compared to the above, `debug` stresses simplicitly of integration and user experience.
