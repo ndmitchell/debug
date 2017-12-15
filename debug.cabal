@@ -8,9 +8,11 @@ category:           Development, Debugging
 author:             Neil Mitchell <ndmitchell@gmail.com>
 maintainer:         Neil Mitchell <ndmitchell@gmail.com>
 copyright:          Neil Mitchell 2017
-synopsis:           Debugging made easy
+synopsis:           Debugging intermediate results
 description:
-    Easy debugging which is easy and is debugging.
+    An easy to use debugger for viewing intermediate results and variables of a computation.
+    To use, annotate the function under test, run the code, and view the easy-to-follow HTML
+    output. Full usage instructions are at 'Debug.debug'.
 homepage:           https://github.com/ndmitchell/debug
 bug-reports:        https://github.com/ndmitchell/debug/issues
 tested-with:        GHC==8.2.1, GHC==8.0.2, GHC==7.10.3, GHC==7.8.4, GHC==7.6.3
