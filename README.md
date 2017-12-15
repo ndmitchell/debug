@@ -44,7 +44,7 @@ The call to `debugView` starts a web browser to view the recorded information, l
 
 ![Debug view output](debug.png)
 
-**Limitations**
+## Limitations
 
 This tool is quite new, so it has both limitations, places it is incomplete and bugs. Some notable issues:
 
@@ -52,7 +52,7 @@ This tool is quite new, so it has both limitations, places it is incomplete and 
 * It doesn't really understand shadowed variables, so it will work, but the debug results will be lower quality.
 * For function values it won't give you a whole lot of information.
 
-**Alternatives**
+## Alternatives
 
 For practical alternatives for debugging Haskell programs you may wish to consider:
 
