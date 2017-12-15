@@ -6,7 +6,7 @@ module Debug(
     ) where
 
 import Debug.Record
-import Data.List
+import Data.List.Extra
 import Data.Maybe
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
@@ -23,7 +23,7 @@ debug q = do
 adjustDec :: (Name -> Maybe Dec) -> Dec -> Q Dec
 -- try and shove in a "Show a =>" if we can
 adjustDec askSig (SigD name (ForallT vars ctxt typ)) =
-    return $ SigD name $ ForallT vars ([AppT (ConT ''Show) x | x@VarT{} <- universe typ] ++ ctxt) typ
+    return $ SigD name $ ForallT vars (nubOrd $ [AppT (ConT ''Show) x | x@VarT{} <- universe typ] ++ ctxt) typ
 adjustDec askSig (SigD name typ) = adjustDec askSig $ SigD name $ ForallT [] [] typ
 adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_)) = do
     inner <- newName "inner"
