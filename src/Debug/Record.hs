@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-} -- Dodgy Show instance, useful for debugging
 
 module Debug.Record(
@@ -94,9 +95,11 @@ debugHTML = do
             | otherwise = x
     return $ unlines $ map f $ lines html
 
-
+#if __GLASGOW_HASKELL__ >= 800
+-- On older GHC's this level of overlap leads to a compile error
 instance {-# OVERLAPS #-} Show a where
     show _ = "?"
+#endif
 
 {-# NOINLINE fun #-}
 fun :: Show a => String -> (Call -> a) -> a
