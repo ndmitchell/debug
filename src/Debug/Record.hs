@@ -6,15 +6,20 @@
 module Debug.Record(
     debugClear,
     debugConsole, debugJS, debugHTML,
+    debugView,
     Function(..),
     Call,
     funInfo, fun, var
     ) where
 
 import Debug.Variables
+import Control.Exception
 import Control.Monad
 import Data.IORef
 import Data.List.Extra
+import System.IO
+import System.Directory
+import System.Process.Extra
 import System.IO.Unsafe
 import Text.Show.Functions() -- Make sure the Show for functions instance exists
 import qualified Data.Map as Map
@@ -81,6 +86,16 @@ debugJS = do
         jsonList (x:xs) = unlines $ ("  [" ++ x) : map ("  ," ++) xs ++ ["  ]"]
         jsonMap xs = "{" ++ intercalate "," [jsonString k ++ ":" ++ v | (k,v) <- xs] ++ "}"
         jsonString = show
+
+debugView :: IO ()
+debugView = do
+    tdir <- getTemporaryDirectory
+    file <- bracket
+        (openTempFile tdir "debug.html")
+        (hClose . snd)
+        (\(file,h) -> do hPutStr h =<< debugHTML; return file)
+    system_ file
+
 
 debugHTML :: IO String
 debugHTML = do
