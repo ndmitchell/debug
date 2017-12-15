@@ -36,6 +36,7 @@ library
         ghc-prim,
         extra,
         containers,
+        directory,
         template-haskell,
         uniplate,
         js-jquery
