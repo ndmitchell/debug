@@ -31,8 +31,8 @@ quicksort'' t ((var t "x" -> x):(var t "xs" -> xs)) = quicksort' lt ++ [x] ++ qu
 main = do
     _ <- return ()
     debugClear
-    print $ quicksort (<) "neil"
+    print $ quicksort (<) "haskell"
     debugPrint
     writeFile "trace.js" . ("var trace =\n" ++) . (++ ";") =<< debugJSON
     debugSave "trace.html"
-    print $ quicksort' "neil"
+    print $ quicksort' "haskell"
