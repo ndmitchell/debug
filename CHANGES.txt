@@ -1,3 +1,4 @@
 Changelog for Debug
 
+0.0, released 2017-12-15
     Initial version
