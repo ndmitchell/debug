@@ -31,12 +31,11 @@ adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_)) = do
     args <- sequence [newName $ "arg" ++ show i | i <- [1 .. length arity]]
     let addTag (Clause ps bod inner) = Clause (VarP tag:ps) bod inner
     let clauses2 = map addTag $ transformBi (adjustPat tag) clauses
-    let dol (LitE (StringL x)) = LitE $ StringL $ "$" ++ x
-    let args2 = [VarE 'var `AppE` VarE tag `AppE` dol (toLit a) `AppE` VarE a | a <- args]
+    let args2 = [VarE 'var `AppE` VarE tag `AppE` toLitPre "$" a `AppE` VarE a | a <- args]
     let info = ConE 'Function `AppE`
             toLit name `AppE`
             LitE (StringL $ prettyPrint $ maybeToList (askSig name) ++ [o]) `AppE`
-            ListE (map (dol . toLit) args) `AppE`
+            ListE (map (toLitPre "$") args) `AppE`
             LitE (StringL "$result")
     let body2 = VarE 'var `AppE` VarE tag `AppE` LitE (StringL "$result") `AppE` foldl AppE (VarE inner) (VarE tag : args2)
     let body = VarE 'funInfo `AppE` info `AppE` LamE [VarP tag] body2
@@ -50,5 +49,5 @@ adjustPat :: Name -> Pat -> Pat
 adjustPat tag (VarP x) = ViewP (VarE 'var `AppE` VarE tag `AppE` toLit x) (VarP x)
 adjustPat tag x = x
 
-
-toLit (Name (OccName x) _) = LitE $ StringL x
+toLit = toLitPre ""
+toLitPre pre (Name (OccName x) _) = LitE $ StringL $ pre ++ x
