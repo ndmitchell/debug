@@ -25,7 +25,6 @@ adjustDec :: (Name -> Maybe Dec) -> Dec -> Q Dec
 adjustDec askSig (SigD name (ForallT vars ctxt typ)) =
     return $ SigD name $ ForallT vars ([AppT (ConT ''Show) x | x@VarT{} <- universe typ] ++ ctxt) typ
 adjustDec askSig (SigD name typ) = adjustDec askSig $ SigD name $ ForallT [] [] typ
-adjustDec askSig x@PragmaD{} = return x
 adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_)) = do
     inner <- newName "inner"
     tag <- newName "tag"
@@ -42,7 +41,7 @@ adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_)) = do
     let body2 = VarE 'var `AppE` VarE tag `AppE` LitE (StringL "$result") `AppE` foldl AppE (VarE inner) (VarE tag : args2)
     let body = VarE 'funInfo `AppE` info `AppE` LamE [VarP tag] body2
     return $ FunD name [Clause (map VarP args) (NormalB body) [FunD inner clauses2]]
-adjustDec askSig x = error $ show x
+adjustDec askSig x = return x
 
 prettyPrint = pprint . transformBi f
     where f (Name x _) = Name x NameS -- avoid nasty qualifications
