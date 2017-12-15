@@ -43,3 +43,12 @@ Ok, 1 module loaded.
 The call to `debugView` starts a web browser to view the recorded information, looking something like:
 
 ![Debug view output](debug.png)
+
+**Limitations**
+
+This tool is quite new, so it has both limitations, places it is incomplete and bugs. Some notable issues:
+
+* It calls `show` on all the values in encounters, meaning they must all have a `Show` instance (it defines a global `Show` instance which should get used as a fallback), and they will be fully evaluated. If your program relies on laziness it probably won't work.
+* It doesn't really understand shadowed variables, so it will work, but the functions are a bit off.
+* For function values it won't give you a whole lot of information.
+
