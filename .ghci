@@ -1,3 +1,6 @@
 :set -fwarn-unused-binds -fwarn-unused-imports -fwarn-orphans
 :set -isrc
 :load test/Main.hs src/Paths.hs
+
+:def docs_ const $ return $ unlines [":!cabal haddock"]
+:def docs const $ return $ unlines [":docs_",":!start dist\\doc\\html\\debug\\index.html"]
