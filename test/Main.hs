@@ -39,7 +39,7 @@ main = do
     debugClear
     print $ quicksort (<) "haskell"
     -- see https://github.com/feuerbach/ansi-terminal/issues/47 as this test fails on Appveyor
-    try_ $ debugPrint
+    try_ debugPrint
     writeFile "trace.js" . ("var trace =\n" ++) . (++ ";") =<< debugJSON
     debugSave "trace.html"
     print $ foo [1]
