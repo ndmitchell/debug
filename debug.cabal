@@ -38,6 +38,7 @@ library
         containers,
         directory,
         template-haskell,
+        open-browser,
         uniplate,
         js-jquery
 

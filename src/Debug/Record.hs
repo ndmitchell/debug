@@ -23,11 +23,11 @@ import Data.IORef
 import Data.List.Extra
 import System.IO
 import System.Directory
-import System.Process.Extra
 import System.IO.Unsafe
 import Text.Show.Functions() -- Make sure the Show for functions instance exists
 import qualified Data.Map as Map
 import qualified Language.Javascript.JQuery as JQuery
+import Web.Browser
 import Paths_debug
 
 
@@ -124,7 +124,11 @@ debugView = do
         (hClose . snd)
         (return . fst)
     debugSave file
-    system_ file
+    b <- openBrowser file
+    unless b $ do
+        putStrLn $
+            "Failed to start a web browser, open: " ++ file ++ "\n" ++
+            "In future you may wish to use 'debugSave'."
 
 
 #if __GLASGOW_HASKELL__ >= 800
