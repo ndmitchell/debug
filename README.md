@@ -66,7 +66,7 @@ Compared to the above, `debug` stresses simplicitly of integration and user expe
 
 ### Q: `debugView` fails talking about Wine?
 
-A: If you get `wine: invalid directory "/home/f/.wine" in WINEPREFIX: not an absolute path` when running `debugView` that means `xdg-open` is handled by Wine. Fix that and it will work once more.
+A: If you get `wine: invalid directory "/home/f/.wine" in WINEPREFIX: not an absolute path` when running `debugView` that means `xdg-open` is handled by [Wine](https://www.winehq.org/). Fix that and it will work once more.
 
 
 
