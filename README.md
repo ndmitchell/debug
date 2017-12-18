@@ -61,3 +61,12 @@ For practical alternatives for debugging Haskell programs you may wish to consid
 * [Hat](https://hackage.haskell.org/package/hat), good ideas, but I've never got it working.
 
 Compared to the above, `debug` stresses simplicitly of integration and user experience.
+
+## FAQ
+
+### Q: `debugView` fails talking about Wine?
+
+A: If you get `wine: invalid directory "/home/f/.wine" in WINEPREFIX: not an absolute path` when running `debugView` that means `xdg-open` is handled by Wine. Fix that and it will work once more.
+
+
+
