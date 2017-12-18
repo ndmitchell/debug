@@ -22,6 +22,11 @@ debug [d|
                         | otherwise = (ts, x:fs)
     |]
 
+debug [d|
+    foo :: m a -> m a
+    foo = id
+    |]
+
 quicksort' :: (Ord a, Show a) => [a] -> [a]
 quicksort' arg1 = fun "quicksort" $ \t -> quicksort'' t (var t "arg1" arg1)
 quicksort'' t [] = []
@@ -35,4 +40,5 @@ main = do
     debugPrint
     writeFile "trace.js" . ("var trace =\n" ++) . (++ ";") =<< debugJSON
     debugSave "trace.html"
+    print $ foo [1]
     print $ quicksort' "haskell"
