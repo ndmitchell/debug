@@ -6,6 +6,7 @@ module Main(main) where
 
 import Debug
 import Debug.Record
+import Control.Exception.Extra
 
 debug [d|
     quicksort :: (a -> a -> Bool) -> [a] -> [a]
@@ -37,7 +38,8 @@ main = do
     _ <- return ()
     debugClear
     print $ quicksort (<) "haskell"
-    debugPrint
+    -- see https://github.com/feuerbach/ansi-terminal/issues/47 as this test fails on Appveyor
+    try_ $ debugPrint
     writeFile "trace.js" . ("var trace =\n" ++) . (++ ";") =<< debugJSON
     debugSave "trace.html"
     print $ foo [1]
