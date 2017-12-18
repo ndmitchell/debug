@@ -21,6 +21,8 @@ import Control.Exception
 import Control.Monad
 import Data.IORef
 import Data.List.Extra
+import Data.Maybe
+import Data.Tuple.Extra
 import System.IO
 import System.Directory
 import System.IO.Unsafe
@@ -81,7 +83,7 @@ debugPrint = do
 
           -- stripping the index
           creaAssoc :: [(String, Var)] -> [(String, String)]
-          creaAssoc svs = map (\(s, v) -> (s, varShow v)) svs
+          creaAssoc svs = map (second varShow) svs
 
           header :: [(String, String)] -> Function -> Doc
           header ass f = text "\n*"       <+>
@@ -97,9 +99,7 @@ debugPrint = do
                 in hsep (map text args)
 
           result :: [(String, String)] -> Doc
-          result ass =
-                let res = maybe "�no result!" id (lookup "$result" ass)
-                in text res
+          result = text . fromMaybe "no result!" . lookup "$result"
 
           body :: [(String, String)] -> Doc
           body svs = vsep $ map bodyLine svs
