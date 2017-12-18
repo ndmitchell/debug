@@ -21,7 +21,7 @@ data Variables = Variables
     [(Any, String)] -- Entries, (key a, show a), indexed from [n..0]
 
 data Var = Var Int String -- index into Variables, show a
-         deriving (Eq)
+         deriving (Eq,Ord)
 
 instance Show Var where
     show (Var i s) = s ++ " @" ++ show i

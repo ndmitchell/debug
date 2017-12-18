@@ -65,7 +65,7 @@ debugPrint :: IO ()
 debugPrint = do
     calls <- readIORef refCalls
     concs <- mapM getCall calls
-    let docs = map call (nub . reverse $ concs)
+    let docs = map call $ nubOrd $ reverse concs
     putDoc (vcat docs <> hardline)
     where
           -- "realise" the call (needed to nub them)
