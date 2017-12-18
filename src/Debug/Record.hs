@@ -29,6 +29,7 @@ import qualified Data.Map as Map
 import qualified Language.Javascript.JQuery as JQuery
 import Web.Browser
 import Paths_debug
+import Text.PrettyPrint.ANSI.Leijen as PP
 
 
 -- | Metadata about a function, used to drive the HTML view.
@@ -58,16 +59,53 @@ debugClear = do
     writeIORef refVariables newVariables
     writeIORef refCalls []
 
--- | Print information about the observed function calls to 'stdout'.
---   Definitely not machine readable, usually not human readable either.
+-- | Print information about the observed function calls to 'stdout',
+--   in a human-readable format.
 debugPrint :: IO ()
 debugPrint = do
-    funs <- readIORef refCalls
-    forM_ (reverse funs) $ \(Call name vars) -> do
-        putStrLn $ funName name
-        vars <- readIORef vars
-        forM_ (reverse vars) $ \(name, v) ->
-            putStrLn $ "  " ++ name ++ " = " ++ show v
+    calls <- readIORef refCalls
+    concs <- mapM getCall calls
+    let docs = map call (nub . reverse $ concs)
+    putDoc (vcat docs <> hardline)
+    where
+          -- "realise" the call (needed to nub them)
+          getCall :: Call -> IO (Function, [(String, Var)])
+          getCall (Call f is) = do sv <- readIORef is
+                                   return (f, sv)
+
+          call :: (Function, [(String, Var)]) -> Doc
+          call (f, vs) =
+                   let ass = creaAssoc . reverse $ vs
+                       hdr = bold $ header ass f
+                   in hang 5 $ hdr <$$> body ass
+
+          -- stripping the index
+          creaAssoc :: [(String, Var)] -> [(String, String)]
+          creaAssoc svs = map (\(s, v) -> (s, varShow v)) svs
+
+          header :: [(String, String)] -> Function -> Doc
+          header ass f = text "\n*"       <+>
+                         text (funName f) <+>
+                         arguments ass    <+>
+                         text "="         <+>
+                         result ass
+
+          arguments :: [(String, String)] -> Doc
+          arguments ass =
+                let fass = filter (\(t, _) -> take 4 t == "$arg") ass
+                    args = map snd fass
+                in hsep (map text args)
+
+          result :: [(String, String)] -> Doc
+          result ass =
+                let res = maybe "�no result!" id (lookup "$result" ass)
+                in text res
+
+          body :: [(String, String)] -> Doc
+          body svs = vsep $ map bodyLine svs
+
+          bodyLine :: (String, String) -> Doc
+          bodyLine (t, v) = text t <+> text "=" <+> text v
 
 -- | Obtain information about observed functions in JSON format.
 --   The JSON format is not considered a stable part of the interface,

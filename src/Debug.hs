@@ -46,7 +46,7 @@ module Debug(
     -- * Generate trace
     debug,
     -- * View a trace
-    debugView, debugSave,
+    debugView, debugSave, debugPrint,
     -- * Clear a trace
     debugClear,
     ) where

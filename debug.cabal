@@ -40,7 +40,8 @@ library
         template-haskell,
         open-browser,
         uniplate,
-        js-jquery
+        js-jquery,
+        ansi-wl-pprint
 
     exposed-modules:
         Debug
