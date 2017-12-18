@@ -125,7 +125,7 @@ debugView = do
         (return . fst)
     debugSave file
     b <- openBrowser file
-    unless b $ do
+    unless b $
         putStrLn $
             "Failed to start a web browser, open: " ++ file ++ "\n" ++
             "In future you may wish to use 'debugSave'."
