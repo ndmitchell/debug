@@ -51,4 +51,4 @@ ptrEqual :: Any -> Any -> Bool
 ptrEqual a b = unsafePerformIO $ do
     a <- evaluate a
     b <- evaluate b
-    return (tagToEnum# (reallyUnsafePtrEquality# a b) :: Bool)
+    return $ isTrue# (reallyUnsafePtrEquality# a b)
