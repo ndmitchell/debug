@@ -32,13 +32,13 @@ import Data.Aeson
 import Data.Aeson.Text
 import Data.Aeson.Types
 import Data.Char
+import Data.Hashable
 import Data.IORef
 import Data.List.Extra
 import Data.Maybe
 import Data.Tuple.Extra
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.HashMap.Strict as HM
-import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as TL
@@ -63,6 +63,8 @@ data Function = Function
     ,funResult :: String -- ^ Variable for the result of the function
     }
     deriving (Eq,Generic,Ord,Show)
+
+instance Hashable Function
 
 -- | A single function call, used to attach additional information
 data Call = Call Function (IORef [(String, Var)])
@@ -242,11 +244,11 @@ getDebugTrace = do
   vars <- return $ map varShow $ listVariables vars
   calls <- readIORef refCalls
   let infos = nubOrd [x | Call x _ <- calls]
-      infoId = Map.fromList $ zip infos [0::Int ..]
+      infoId = HM.fromList $ zip infos [0::Int ..]
   callEntries <-
     forM (reverse calls) $ \(Call info vars) -> do
       vars <- readIORef vars
-      let callFunctionId   = infoId Map.! info
+      let callFunctionId   = infoId HM.! info
           callVals = map (second varId) vars
       return CallData{..}
   return $ DebugTrace infos vars callEntries
