@@ -8,7 +8,7 @@ import qualified Data.List as List
 import Data.Monoid
 import Debug.Backend.Hoed
 import qualified Debug.Hoed as Hoed
-import Debug.Record
+import Debug.Record hiding (getDebugTrace)
 import Control.Exception.Extra
 
 debug [d|
@@ -39,7 +39,7 @@ debug [d|
 
 main = do
     _ <- return ()
-    trace <- runO $ putStrLn$ quicksort (<) "haskell"
+    trace <- getDebugTrace $ putStrLn$ quicksort (<) "haskell"
     try_ $ debugPrintTrace trace
     B.writeFile "trace.js" . ("var trace =\n" <>) . (<> ";") $ debugJSONTrace trace
     debugSaveTrace "trace.html" trace

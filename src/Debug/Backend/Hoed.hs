@@ -1,19 +1,30 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
-module Debug.Backend.Hoed(Observable(..), runO, convert, debug) where
+module Debug.Backend.Hoed
+  ( Observable(..)
+  , runO
+  , Debug.Backend.Hoed.getDebugTrace
+  , debug
+  ) where
 
 import Data.Graph.Libgraph
 import qualified Data.HashMap.Strict as HM
 import Data.List.Extra
-import Debug.Record
+import Debug.Record as Debug
 import Debug.Hoed hiding (runO)
 import Debug.Hoed.CompTree
 import Debug.Hoed.Render
 import Debug.Hoed.TH
 
-runO :: IO () -> IO DebugTrace
-runO program = convert <$> runO' defaultHoedOptions program
+-- | Runs the program collecting a debugging trace and then opens a web browser to inspect it.
+runO :: IO () -> IO ()
+runO program = program >> Debug.getDebugTrace >>= debugViewTrace
 
+-- | Runs the program collecting a debugging trace
+getDebugTrace :: IO () -> IO DebugTrace
+getDebugTrace program = convert <$> runO' defaultHoedOptions program
+
+-- | Convert a 'Hoed' trace to a 'debug' trace
 convert :: HoedAnalysis -> DebugTrace
 convert HoedAnalysis {..} = DebugTrace {..}
   where
