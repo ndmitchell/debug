@@ -1,0 +1,33 @@
+name:                debug-hoed
+version:             0.1.0.0
+#synopsis:
+#description:
+homepage:            https://github.com/pepeiborra/debug-hoed#readme
+license:             BSD3
+author:              Pepe Iborra
+maintainer:          pepeiborra@gmail.com
+copyright:           All Rights Reserved
+category:            Debugging
+extra-source-files:
+- README.md
+
+dependencies:
+  - base >= 4.7 && < 5
+  - debug
+  - extra
+  - libgraph >= 1.14
+  - unordered-containers
+
+library:
+    source-dirs:      src
+    dependencies: 
+      - Hoed >= 0.4.1
+
+tests:
+  test:
+    main: Main.hs
+    source-dirs: test
+    dependencies: 
+      - bytestring
+      - debug-hoed
+      - Hoed >= 0.4.1
