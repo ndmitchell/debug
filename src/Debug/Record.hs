@@ -146,7 +146,7 @@ debugSaveTrace file db = do
     html <- TL.readFile =<< getDataFileName "html/debug.html"
     debug <- TL.readFile =<< getDataFileName "html/debug.js"
     jquery <- TL.readFile =<< JQuery.file
-    trace <- encodeToLazyText <$> getDebugTrace
+    let trace = encodeToLazyText db
     let script a = "<script>\n" <> a <> "\n</script>"
     let f x | "trace.js" `TL.isInfixOf` x = script ("var trace =\n" <> trace <> ";")
             | "debug.js" `TL.isInfixOf` x = script debug
