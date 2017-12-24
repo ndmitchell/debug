@@ -283,7 +283,7 @@ functionJsonOptions =
     functionLabelModifier "funResult" = "result"
 
 instance FromJSON Function where
-  parseJSON = genericParseJSON functionJsonOptions
+    parseJSON = genericParseJSON functionJsonOptions
 
 instance ToJSON Function where
-  toJSON = genericToJSON functionJsonOptions
+    toJSON = genericToJSON functionJsonOptions
