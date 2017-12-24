@@ -14,15 +14,18 @@ extra-source-files:
 dependencies:
   - base >= 4.7 && < 5
   - debug
-  - hashable
-  - libgraph >= 1.14
-  - monoidal-containers
-  - unordered-containers
 
 library:
     source-dirs:      src
     dependencies: 
       - Hoed >= 0.4.1
+      - extra
+      - hashable
+      - libgraph >= 1.14
+      - monoidal-containers
+      - template-haskell
+      - uniplate
+      - unordered-containers
 
 tests:
   test:
