@@ -33,15 +33,20 @@ library
     hs-source-dirs:   src
     build-depends:
         base == 4.*,
+        bytestring,
+        aeson,
         ghc-prim,
         extra,
-        containers,
         directory,
+        hashable,
         template-haskell,
         open-browser,
+        text,
         uniplate,
+        unordered-containers,
         js-jquery,
-        ansi-wl-pprint
+        ansi-wl-pprint,
+        vector
 
     exposed-modules:
         Debug
@@ -59,5 +64,6 @@ test-suite debug-test
 
     build-depends:
         base == 4.*,
+        bytestring,
         extra,
         debug
