@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Main(main) where
+module Main where
 
 import qualified Data.ByteString.Lazy as B
 import qualified Data.List as List
@@ -9,7 +9,6 @@ import Data.Monoid
 import Debug.Backend.Hoed
 import qualified Debug.Hoed as Hoed
 import Debug.Record hiding (getDebugTrace)
-import Control.Exception.Extra
 
 debug [d|
     quicksort :: (a -> a -> Bool) -> [a] -> [a]
@@ -40,7 +39,7 @@ debug [d|
 main = do
     _ <- return ()
     trace <- getDebugTrace $ putStrLn$ quicksort (<) "haskell"
-    try_ $ debugPrintTrace trace
+    debugPrintTrace trace
     B.writeFile "trace.js" . ("var trace =\n" <>) . (<> ";") $ debugJSONTrace trace
     debugSaveTrace "trace.html" trace
     print $ foo [1]

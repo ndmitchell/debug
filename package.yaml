@@ -14,8 +14,9 @@ extra-source-files:
 dependencies:
   - base >= 4.7 && < 5
   - debug
-  - extra
+  - hashable
   - libgraph >= 1.14
+  - monoidal-containers
   - unordered-containers
 
 library:
