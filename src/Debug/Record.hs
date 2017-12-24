@@ -274,13 +274,10 @@ instance ToJSON CallData where
     object $
     "" .= callFunctionId : map (uncurry (.=) . first T.pack) callVals
 
-functionJsonOptions =
-  defaultOptions {fieldLabelModifier = functionLabelModifier}
-  where
-    functionLabelModifier "funName" = "name"
-    functionLabelModifier "funSource" = "source"
-    functionLabelModifier "funArguments" = "arguments"
-    functionLabelModifier "funResult" = "result"
+functionJsonOptions = defaultOptions{fieldLabelModifier = f}
+    where
+        f x | Just (x:xs) <- stripPrefix "fun" x = toLower x : xs
+            | otherwise = x
 
 instance FromJSON Function where
     parseJSON = genericParseJSON functionJsonOptions
