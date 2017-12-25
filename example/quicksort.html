@@ -1,0 +1,231 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <title>Debug</title>
+        <script>
+window.jQuery || document.write('<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"><\/script>');
+        </script>
+<script>
+var trace =
+{"variables":["\"ae\"","\"askell\"","\"e\"","\"ea\"","\"haskell\"","\"kll\"","\"l\"","\"ll\"","\"llk\"","\"skll\"","\"sllk\"","\"sllkhea\"","'e'","'l'","(\"e\", [])","(\"ll\", [])","(\"skll\", \"ae\")","([], \"kll\")","([], \"l\")","([], [])","[]","_","{ \\ 'a'  -> False\n, \\ 'e'  -> False\n, \\ 'k'  -> True\n, \\ 'l'  -> True\n, \\ 's'  -> True\n}","{ \\ 'a' 'e'  -> True\n, \\ 'h'  -> { \\ 'a'  -> False , \\ 'e'  -> False , \\ 'k'  -> True , \\ 'l'  -> True , \\ 's'  -> True }\n, \\ 'k'  -> { \\ 'l'  -> True }\n, \\ 'l' 'l'  -> False\n, \\ 's'  -> { \\ 'k'  -> False , \\ 'l'  -> False }\n}","{ \\ 'a' 'e'  -> True\n}","{ \\ 'a' (\"skll\", \"e\")  -> (\"skll\", \"ae\")\n, \\ 'e' (\"ll\", [])  -> (\"ll\", \"e\")\n, \\ 'k' (\"ll\", \"e\")  -> (\"kll\", \"e\")\n, \\ 'l' (\"l\", [])  -> (\"ll\", [])\n, \\ 'l' ([], [])  -> (\"l\", [])\n, \\ 's' (\"kll\", \"e\")  -> (\"skll\", \"e\")\n}","{ \\ 'e'  -> True\n}","{ \\ 'k'  -> False\n, \\ 'l'  -> False\n}","{ \\ 'k'  -> { \\ 'l'  -> True }\n, \\ 'l' 'l'  -> False\n, \\ 's'  -> { \\ 'k'  -> False , \\ 'l'  -> False }\n}","{ \\ 'k'  -> { \\ 'l'  -> True }\n, \\ 'l' 'l'  -> False\n}","{ \\ 'k' ([], \"ll\")  -> ([], \"kll\")\n, \\ 'l' ([], \"l\")  -> ([], \"ll\")\n, \\ 'l' ([], [])  -> ([], \"l\")\n}","{ \\ 'l'  -> False\n}","{ \\ 'l'  -> True\n}","{ \\ 'l' 'l'  -> False\n}","{ \\ 'l' (\"l\", [])  -> (\"ll\", [])\n, \\ 'l' ([], [])  -> (\"l\", [])\n}"],"functions":[{"arguments":["$arg1","$arg2"],"result":"$result","name":"partition","source":"partition p xs = foldr (select p) ([], []) xs\n"},{"arguments":["$arg1","$arg2","lt","gt"],"result":"$result","name":"quicksort","source":"quicksort op ([]) = []\nquicksort op (x : xs) = quicksort op lt ++ ([x] ++ quicksort op gt)\n              where (lt, gt) = partition (op x) xs\n"},{"arguments":["$arg1","$arg2"],"result":"$result","name":"quicksort","source":"quicksort op ([]) = []\nquicksort op (x : xs) = quicksort op lt ++ ([x] ++ quicksort op gt)\n              where (lt, gt) = partition (op x) xs\n"},{"arguments":["$arg1"],"result":"$result","name":"select","source":"select p x (~(ts, fs)) | p x = (x : ts, fs)\n                       | otherwise = (ts, x : fs)\n"},{"arguments":["$arg1","$arg2","$arg3"],"result":"$result","name":"select","source":"select p x (~(ts, fs)) | p x = (x : ts, fs)\n                       | otherwise = (ts, x : fs)\n"}],"calls":[{"":1,"$parents":[1],"gt":20,"$arg1":21,"$arg2":2,"$result":2,"lt":20,"$depends":[16,22,16]},{"":1,"$parents":[6],"gt":20,"$arg1":24,"$arg2":0,"$result":3,"lt":2,"$depends":[0,21,16]},{"":1,"$parents":[3],"gt":20,"$arg1":21,"$arg2":6,"$result":6,"lt":20,"$depends":[16,22,16]},{"":1,"$parents":[4],"gt":6,"$arg1":33,"$arg2":7,"$result":7,"lt":20,"$depends":[16,23,2]},{"":1,"$parents":[5],"gt":20,"$arg1":29,"$arg2":5,"$result":8,"lt":7,"$depends":[3,24,16]},{"":1,"$parents":[6],"gt":5,"$arg1":28,"$arg2":9,"$result":10,"lt":20,"$depends":[16,25,4]},{"":1,"gt":0,"$arg1":23,"$arg2":4,"$result":11,"lt":9,"$depends":[5,26,1]},{"":4,"$parents":[21],"$arg1":26,"$arg2":12,"$result":14,"$arg3":19},{"":4,"$parents":[23],"$arg1":31,"$arg2":13,"$result":18,"$arg3":19},{"":2,"$parents":[1],"$arg1":21,"$arg2":20,"$result":20},{"":2,"$parents":[0],"$arg1":21,"$arg2":20,"$result":20},{"":2,"$parents":[0],"$arg1":21,"$arg2":20,"$result":20},{"":2,"$parents":[4],"$arg1":21,"$arg2":20,"$result":20},{"":2,"$parents":[2],"$arg1":21,"$arg2":20,"$result":20},{"":2,"$parents":[2],"$arg1":21,"$arg2":20,"$result":20},{"":2,"$parents":[3],"$arg1":21,"$arg2":20,"$result":20},{"":2,"$parents":[5],"$arg1":21,"$arg2":20,"$result":20},{"":3,"$parents":[24],"$arg1":32,"$result":34},{"":3,"$parents":[25],"$arg1":27,"$result":30},{"":3,"$parents":[26],"$arg1":22,"$result":25},{"":0,"$parents":[0],"$arg1":21,"$arg2":20,"$result":19},{"":0,"$parents":[1],"$arg1":26,"$arg2":2,"$result":14,"$depends":[7]},{"":0,"$parents":[2],"$arg1":21,"$arg2":20,"$result":19},{"":0,"$parents":[3],"$arg1":31,"$arg2":6,"$result":18,"$depends":[8]},{"":0,"$parents":[4],"$arg1":32,"$arg2":7,"$result":15,"$depends":[17]},{"":0,"$parents":[5],"$arg1":27,"$arg2":5,"$result":17,"$depends":[18]},{"":0,"$parents":[6],"$arg1":22,"$arg2":1,"$result":16,"$depends":[19]}]};
+</script>
+<script>
+var hsLexer = /[a-zA-Z][a-zA-Z0-9]+|[\r\n]|./;
+var symbols = "->:=()[]";
+
+function escapeHTML(x)
+{
+    return x
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+}
+
+function showCall(i)
+{
+    var t = trace.calls[i];
+    var inf = trace.functions[t[""]];
+    $source = $("#function-source").empty();
+    var source = inf.source;
+    while (source != "")
+    {
+        var res = hsLexer.exec(source);
+        if (res == null || res[0].length == 0)
+        {
+            $source.append(source);
+            break;
+        }
+        else
+        {
+            if (res[0] == "where")
+                $source.append("<span class='hs-keyword'>where</a>");
+            else if (symbols.indexOf(res[0]) != -1)
+                $source.append("<span class='hs-keyglyph'>" + escapeHTML(res[0]) + "</a>");
+            else if (res[0] in t)
+                $source.append("<abbr title='" + escapeHTML(trace.variables[t[res[0]]]) + "'>" + escapeHTML(res[0]) + "</abbr>");
+            else
+                $source.append(res[0]);
+            source = source.substr(res[0].length);
+        }
+    }
+
+    showCallStack(i);
+
+    $("#function-variables").empty();
+    var variables = [];
+    var seenDepends = false;
+
+    for (var s in t)
+    {
+        if (s == "" || s == "$parents" || s == "$depends") continue;
+        else
+            variables.push(s + " = " + trace.variables[t[s]]);
+    }
+    variables = variables.sort();
+    for (var i = 0; i < variables.length; i++)
+        $("#function-variables").append($("<li>" + escapeHTML(variables[i]) + "</li>"));
+}
+
+function showCallStack(me)
+{
+    var t = trace.calls[me];
+    var d = t["$depends"];
+    if(t["$parents"] == null && d == null)
+        $("#function-depends-section").hide();
+    else {
+        var i;
+        var par = me;
+        var parents = [];
+        var depends = [];
+        var msg;
+        var these;
+        $("#function-depends").empty();
+        // parents
+        while(true){
+            these = trace.calls[par]["$parents"];
+            if(these == null || these.Length == 0) {
+                break;
+            }
+            // assumes one parent only
+            par = these[0];
+            msg = renderCall(par);
+            parents.unshift("<li><a href='javascript:showCall(" + par + ")'>" + escapeHTML(msg) + "</a></li>");
+
+        }
+        // depends
+        for(i in d) {
+            msg = renderCall(d[i]);
+            depends.push("<li><a href='javascript:showCall(" + d[i] + ")'>" + escapeHTML(msg) + "</a></li>");
+        }
+        // assembling the call stack. There must be a better way...
+        var callstack = $("#function-depends");
+        var cursor = callstack;
+        var temp;
+        for(i in parents) {
+            temp = $("<ul>");
+            cursor.append($(parents[i]).append(temp));
+            cursor = temp;
+        }
+        temp = $("<ul>");
+        cursor = cursor.append($("<li>" + escapeHTML(renderCall(me)) + "</li>").append(temp));
+        cursor = temp;
+        for(i in depends)
+            cursor.append($(depends[i]));
+    }
+ }
+function renderCall(i)
+{
+     var t = trace.calls[i];
+     var inf = trace.functions[t[""]];
+     var words = [];
+     words.push(inf.name);
+     for (var j = 0; j < inf.arguments.length; j++)
+        {
+            var v = inf.arguments[j];
+            if (v in t)
+                words.push(trace.variables[t[v]]);
+            else
+                words.push("_");
+        }
+     words.push("=");
+     words.push(trace.variables[t[inf.result]]);
+     var msg = words.join(" ");
+     return msg;
+}
+function showCalls()
+{
+    var name = $("#function-drop").val();
+    var regex = new RegExp();
+    try {
+        regex = new RegExp($("#function-text").val());
+    } catch (e) {
+        // Not a valid regex, just ignore it
+    }
+
+    var ul = $("#function-list").empty();
+    for (var i = 0; i < trace.calls.length; i++)
+    {
+        var msg = renderCall(i);
+        if (!regex.test(msg)) continue;
+        ul.append($("<li><a href='javascript:showCall(" + i + ")'>" + escapeHTML(msg) + "</a></li>"));
+    }
+}
+
+function init()
+{
+    var funcNames = [];
+    for (var i = 0; i < trace.functions.length; i++)
+        if(!funcNames.includes(trace.functions[i].name))
+            funcNames.push(trace.functions[i].name);
+    funcNames = funcNames.sort();
+    var drop = $("#function-drop");
+    for (var i = 0; i < funcNames.length; i++)
+        drop.append($("<option>" + escapeHTML(funcNames[i]) + "</option>"));
+
+    $("#function-drop").change(showCalls);
+    $("#function-text").change(showCalls).on("input", showCalls);
+}
+
+$(function(){
+    init();
+    showCalls();
+    showCall(0);
+});
+
+</script>
+<style type="text/css">
+body {height: 100%;}
+h1, h2, ul {font-family: sans-serif;}
+h1 {margin-bottom: 5px;}
+ul {font-size: 10pt;}
+h1 {font-size: 20pt; background-color: #d3d3d3; margin-top: 0; padding: 5px;}
+#function-list a {text-decoration: none;}
+h2 {margin-top: 0; margin-bottom: 5px; font-size: 12pt;}
+td {vertical-align: top;}
+abbr {text-decoration: none;}
+
+.hs-keyglyph {color: red;}
+.hs-keyword {color: blue;}
+.hs-comment {color: green;}
+.hs-str, .hs-chr {color: teal;}
+</style>
+    </head>
+    <body>
+
+<table style="height:100%;width:100%;">
+    <tr>
+        <td colspan="3">
+            <h1>Haskell Debugger</h1>
+        </td>
+    </tr>
+    <tr>
+        <td rowspan="3" width="25%" style="padding-right:40px;">
+            <h2>Functions</h1>
+            <select id="function-drop" style="width:100%;"><option>(All)</option></select><br/>
+            <input id="function-text" style="margin-top:5px;width:100%;" type="text" placeholder="Filter (using regex)" />
+            <ul id="function-list"></ul>
+        </td>
+        <td>
+            <h2>Source</h2>
+            <pre id="function-source"></pre>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <h2>Variables</h2>
+            <ul id="function-variables"></ul>
+        </td>
+    </tr>
+    <tr id="function-depends-section">
+        <td>
+            <h2>Calls</h2>
+            <ul id="function-depends"</ul>
+        </td>
+    </tr>
+</table>
+
+
+    </body>
+</html>
