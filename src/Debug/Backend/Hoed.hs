@@ -54,7 +54,7 @@ type HoedCallKey = [String] -- argValues
 data HoedCallDetails = HoedCallDetails
   { clauseValues :: [String]
   , result :: String
-  , depends :: [(HoedFunctionKey, HoedCallKey)]
+  , depends, parents :: [(HoedFunctionKey, HoedCallKey)]
   } deriving (Eq, Generic, Hashable)
 
 hoedCallValues :: HoedCallKey -> HoedCallDetails -> [String]
@@ -65,7 +65,7 @@ extractHoedCall hoedCompTree v@Vertex {vertexStmt = c@CompStmt { stmtLabel , stm
   Just
     ( HoedFunctionKey stmtLabel (length stmtLamArgs) (map fst clauses)
     , stmtLamArgs
-    , HoedCallDetails (map snd clauses) stmtLamRes depends)
+    , HoedCallDetails (map snd clauses) stmtLamRes depends parents)
   where
     clauses =
       [ (stmtLabel, stmtCon)
@@ -77,6 +77,12 @@ extractHoedCall hoedCompTree v@Vertex {vertexStmt = c@CompStmt { stmtLabel , stm
         | v'@Vertex {vertexStmt = CompStmt {stmtLabel, stmtDetails = StmtLam {..}}} <- succs hoedCompTree v
         , Just (fnKey, callKey, _) <- [extractHoedCall hoedCompTree v']
       ]
+    parents =
+      [ (fnKey, callKey)
+        | v'@Vertex {vertexStmt = CompStmt {stmtLabel, stmtDetails = StmtLam {..}}} <- preds hoedCompTree v
+        , Just (fnKey, callKey, _) <- [extractHoedCall hoedCompTree v']
+      ]
+
 extractHoedCall _ _ = Nothing
 
 -- | Convert a 'Hoed' trace to a 'debug' trace
@@ -125,6 +131,7 @@ convert HoedAnalysis {..} = DebugTrace {..}
               zipWith (\i v -> ("$arg" ++ show i, v)) [1 ..] argValues ++
               zip clauses clauseValues
       , let callDepends = map lookupCallIndex depends
+      , let callParents = map lookupCallIndex parents
       ]
     calls = map snd callsTable
 
