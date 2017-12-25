@@ -39,17 +39,55 @@ function showCall(i)
         }
     }
     $("#function-variables").empty();
+    $("#function-depends").empty();
     var variables = [];
+    var depends = [];
+    var seenDepends = false;
     for (var s in t)
     {
         if (s == "") continue;
-        variables.push(s + " = " + trace.variables[t[s]]);
+        if (s == "$depends") {
+            showDepends(t[s]);
+            seenDepends = true;
+        }
+        else
+            variables.push(s + " = " + trace.variables[t[s]]);
     }
+    if(!seenDepends)
+        $("#function-depends-section").hide();
     variables = variables.sort();
     for (var i = 0; i < variables.length; i++)
         $("#function-variables").append($("<li>" + escapeHTML(variables[i]) + "</li>"));
 }
 
+function showDepends(s)
+{
+    var i;
+    for(i in s) {
+         var msg = renderCall(s[i]);
+         $("#function-depends").append($("<li><a href='javascript:showCall(" + s[i] + ")'>" + escapeHTML(msg) + "</a></li>"));
+
+     }
+ }
+function renderCall(i)
+{
+     var t = trace.calls[i];
+     var inf = trace.functions[t[""]];
+     var words = [];
+     words.push(inf.name);
+     for (var j = 0; j < inf.arguments.length; j++)
+        {
+            var v = inf.arguments[j];
+            if (v in t)
+                words.push(trace.variables[t[v]]);
+            else
+                words.push("_");
+        }
+     words.push("=");
+     words.push(trace.variables[t[inf.result]]);
+     var msg = words.join(" ");
+     return msg;
+}
 function showCalls()
 {
     var name = $("#function-drop").val();
@@ -63,22 +101,7 @@ function showCalls()
     var ul = $("#function-list").empty();
     for (var i = 0; i < trace.calls.length; i++)
     {
-        var t = trace.calls[i];
-        var inf = trace.functions[t[""]];
-        if (name != "(All)" && name != inf.name) continue;
-        var words = [];
-        words.push(inf.name);
-        for (var j = 0; j < inf.arguments.length; j++)
-        {
-            var v = inf.arguments[j];
-            if (v in t)
-                words.push(trace.variables[t[v]]);
-            else
-                words.push("_");
-        }
-        words.push("=");
-        words.push(trace.variables[t[inf.result]]);
-        var msg = words.join(" ");
+        var msg = renderCall(i);
         if (!regex.test(msg)) continue;
         ul.append($("<li><a href='javascript:showCall(" + i + ")'>" + escapeHTML(msg) + "</a></li>"));
     }
