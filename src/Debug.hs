@@ -53,6 +53,7 @@ module Debug(
     ) where
 
 import Debug.Record
+import Control.Monad.Extra
 import Data.List.Extra
 import Data.Maybe
 import Language.Haskell.TH
@@ -64,6 +65,10 @@ import Data.Generics.Uniplate.Data
 --   For an example see "Debug". Inserts 'funInfo' and 'var' calls.
 debug :: Q [Dec] -> Q [Dec]
 debug q = do
+    missing <- filterM (notM . isExtEnabled) [ViewPatterns, PartialTypeSignatures]
+    when (missing /= []) $
+        error $ "\ndebug [d| ... |] requires additional extensions:\n" ++
+                "{-# LANGUAGE " ++ intercalate ", " (map show missing) ++ " #-}\n"
     decs <- q
     let askSig x = find (\case SigD y _ -> x == y; _ -> False) decs
     mapM (adjustDec askSig) decs
