@@ -30,7 +30,7 @@ debug [d|
     type1 = id
 
     type2 :: Int -> m Int
-    type2 = undefined
+    type2 _ = undefined
     |]
 
 quicksort' :: (Ord a, Show a) => [a] -> [a]
