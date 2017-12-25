@@ -38,36 +38,70 @@ function showCall(i)
             source = source.substr(res[0].length);
         }
     }
+
+    showCallStack(i);
+
     $("#function-variables").empty();
-    $("#function-depends").empty();
     var variables = [];
-    var depends = [];
     var seenDepends = false;
+
     for (var s in t)
     {
-        if (s == "") continue;
-        if (s == "$depends") {
-            showDepends(t[s]);
-            seenDepends = true;
-        }
+        if (s == "" || s == "$parents" || s == "$depends") continue;
         else
             variables.push(s + " = " + trace.variables[t[s]]);
     }
-    if(!seenDepends)
-        $("#function-depends-section").hide();
     variables = variables.sort();
     for (var i = 0; i < variables.length; i++)
         $("#function-variables").append($("<li>" + escapeHTML(variables[i]) + "</li>"));
 }
 
-function showDepends(s)
+function showCallStack(me)
 {
-    var i;
-    for(i in s) {
-         var msg = renderCall(s[i]);
-         $("#function-depends").append($("<li><a href='javascript:showCall(" + s[i] + ")'>" + escapeHTML(msg) + "</a></li>"));
+    var t = trace.calls[me];
+    var d = t["$depends"];
+    if(t["$parents"] == null && d == null)
+        $("#function-depends-section").hide();
+    else {
+        var i;
+        var par = me;
+        var parents = [];
+        var depends = [];
+        var msg;
+        var these;
+        $("#function-depends").empty();
+        // parents
+        while(true){
+            these = trace.calls[par]["$parents"];
+            if(these == null || these.Length == 0) {
+                break;
+            }
+            // assumes one parent only
+            par = these[0];
+            msg = renderCall(par);
+            parents.unshift("<li><a href='javascript:showCall(" + par + ")'>" + escapeHTML(msg) + "</a></li>");
 
-     }
+        }
+        // depends
+        for(i in d) {
+            msg = renderCall(d[i]);
+            depends.push("<li><a href='javascript:showCall(" + d[i] + ")'>" + escapeHTML(msg) + "</a></li>");
+        }
+        // assembling the call stack. There must be a better way...
+        var callstack = $("#function-depends");
+        var cursor = callstack;
+        var temp;
+        for(i in parents) {
+            temp = $("<ul>");
+            cursor.append($(parents[i]).append(temp));
+            cursor = temp;
+        }
+        temp = $("<ul>");
+        cursor = cursor.append($("<li>" + escapeHTML(renderCall(me)) + "</li>").append(temp));
+        cursor = temp;
+        for(i in depends)
+            cursor.append($(depends[i]));
+    }
  }
 function renderCall(i)
 {
