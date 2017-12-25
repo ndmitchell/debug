@@ -15,7 +15,8 @@
 --   Turn on the @TemplateHaskell@ and @ViewPatterns@ extensions, import "Debug",
 --   indent your code and place it under a call to 'debug', e.g.:
 --
--- > {-# LANGUAGE TemplateHaskell, ViewPatterns #-}
+-- > {-# LANGUAGE TemplateHaskell, ViewPatterns, PartialTypeSignatures #-}
+-- > {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 -- > module QuickSort(quicksort) where
 -- > import Data.List
 -- > import Debug
@@ -68,19 +69,10 @@ debug q = do
     mapM (adjustDec askSig) decs
 
 
--- | List all the type variables of kind * (or do the best you can)
-kindStar :: Type -> Q [Name]
--- in Q so we should be able to use 'reify' to do a better job
-kindStar t = return $
-    nubOrd [x | VarT x <- universe t] \\     -- find all variables
-    nubOrd [x | AppT (VarT x) _ <- universe t] -- delete the "obvious" ones
-
-
 adjustDec :: (Name -> Maybe Dec) -> Dec -> Q Dec
--- try and shove in a "Show a =>" if we can
-adjustDec askSig (SigD name (ForallT vars ctxt typ)) = do
-    vs <- kindStar typ
-    return $ SigD name $ ForallT vars (nubOrd $ map (AppT (ConT ''Show) . VarT) vs ++ ctxt) typ
+-- try and shove in a "_ =>" if we can, to capture necessary Show instances
+adjustDec askSig x@(SigD name (ForallT vars ctxt typ)) = return $
+    SigD name $ ForallT vars (delete WildCardT ctxt ++ [WildCardT]) typ
 adjustDec askSig (SigD name typ) = adjustDec askSig $ SigD name $ ForallT [] [] typ
 adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_)) = do
     inner <- newName "inner"

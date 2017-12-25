@@ -1,5 +1,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 -- {-# OPTIONS_GHC -dth-dec-file #-} -- turn on to debug TH
 
 module Main(main) where
@@ -24,8 +26,11 @@ debug [d|
     |]
 
 debug [d|
-    foo :: m a -> m a
-    foo = id
+    type1 :: m a -> m a
+    type1 = id
+
+    type2 :: Int -> m Int
+    type2 = undefined
     |]
 
 quicksort' :: (Ord a, Show a) => [a] -> [a]
@@ -42,5 +47,6 @@ main = do
     try_ debugPrint
     writeFile "trace.js" . ("var trace =\n" ++) . (++ ";") =<< debugJSON
     debugSave "trace.html"
-    print $ foo [1]
+    evaluate type1
+    evaluate type2
     print $ quicksort' "haskell"

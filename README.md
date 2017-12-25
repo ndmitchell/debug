@@ -15,7 +15,8 @@ quicksort (x:xs) = quicksort lt ++ [x] ++ quicksort gt
 Turn on the `TemplateHaskell` and `ViewPatterns` extensions, import `Debug`, indent your code and place it under a call to `debug`, e.g.:
 
 ```haskell
-{-# LANGUAGE TemplateHaskell, ViewPatterns #-}
+{-# LANGUAGE TemplateHaskell, ViewPatterns, PartialTypeSignatures #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 module QuickSort(quicksort) where
 import Data.List
 import Debug
@@ -67,6 +68,3 @@ Compared to the above, `debug` stresses simplicitly of integration and user expe
 ### Q: `debugView` fails talking about Wine?
 
 A: If you get `wine: invalid directory "/home/f/.wine" in WINEPREFIX: not an absolute path` when running `debugView` that means `xdg-open` is handled by [Wine](https://www.winehq.org/). Fix that and it will work once more.
-
-
-
