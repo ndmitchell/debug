@@ -89,7 +89,7 @@ extractHoedCall _ _ = Nothing
 convert :: HoedAnalysis -> DebugTrace
 convert HoedAnalysis {..} = DebugTrace {..}
   where
-    hoedFunctionCalls :: HoedFunctionKey :-> HMS.HashMap HoedCallKey HoedCallDetails
+    hoedFunctionCalls :: HoedFunctionKey :-> [(HoedCallKey, HoedCallDetails)]
     hoedFunctionCalls =
       HM.fromList
         [ (fnKey, [(callKey, callDetails)])
