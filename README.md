@@ -38,5 +38,5 @@ Why would you want to use `debug-hoed` instead of `debug`? The main reasons are:
 
 - `debug-hoed` is compatible with laziness, so debugging will not alter the semantics of your program.
 - `debug-hoed` can handle function arguments too, displaying them as maps. It can also observe partially applied functions.
-- 'debug-hoed' provides call stacks. 
+- `debug-hoed` provides call stacks. 
 - `Hoed` (the brains behind `debug-hoed`) is reasonably efficient, although no one has performed serious benchmarks yet. 
