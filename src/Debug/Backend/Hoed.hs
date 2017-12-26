@@ -49,23 +49,24 @@ data HoedFunctionKey = HoedFunctionKey
   }
   deriving (Eq, Generic, Hashable)
 
-type HoedCallKey = [String] -- argValues
+type HoedCallKey = Int
 
 data HoedCallDetails = HoedCallDetails
-  { clauseValues :: [String]
+  { argValues
+  , clauseValues :: [String]
   , result :: String
-  , depends, parents :: [(HoedFunctionKey, HoedCallKey)]
+  , depends, parents :: [HoedCallKey]
   } deriving (Eq, Generic, Hashable)
 
-hoedCallValues :: HoedCallKey -> HoedCallDetails -> [String]
-hoedCallValues argValues HoedCallDetails{..} = result : (argValues ++ clauseValues)
+hoedCallValues :: HoedCallDetails -> [String]
+hoedCallValues HoedCallDetails{..} = result : (argValues ++ clauseValues)
 
 extractHoedCall :: CompTree -> Vertex -> Maybe (HoedFunctionKey, HoedCallKey, HoedCallDetails)
-extractHoedCall hoedCompTree v@Vertex {vertexStmt = c@CompStmt { stmtLabel , stmtDetails = StmtLam {..}}} =
+extractHoedCall hoedCompTree v@Vertex {vertexStmt = c@CompStmt {stmtDetails = StmtLam {..}, ..}} =
   Just
     ( HoedFunctionKey stmtLabel (length stmtLamArgs) (map fst clauses)
-    , stmtLamArgs
-    , HoedCallDetails (map snd clauses) stmtLamRes depends parents)
+    , stmtIdentifier
+    , HoedCallDetails stmtLamArgs (map snd clauses) stmtLamRes depends parents)
   where
     clauses =
       [ (stmtLabel, stmtCon)
@@ -73,12 +74,12 @@ extractHoedCall hoedCompTree v@Vertex {vertexStmt = c@CompStmt { stmtLabel , stm
           succs hoedCompTree v
       ]
     depends =
-      [ (fnKey, callKey)
+      [ callKey
         | v'@Vertex {vertexStmt = CompStmt {stmtLabel, stmtDetails = StmtLam {..}}} <- succs hoedCompTree v
         , Just (fnKey, callKey, _) <- [extractHoedCall hoedCompTree v']
       ]
     parents =
-      [ (fnKey, callKey)
+      [ callKey
         | v'@Vertex {vertexStmt = CompStmt {stmtLabel, stmtDetails = StmtLam {..}}} <- preds hoedCompTree v
         , Just (fnKey, callKey, _) <- [extractHoedCall hoedCompTree v']
       ]
@@ -111,7 +112,7 @@ convert HoedAnalysis {..} = DebugTrace {..}
     variables :: [String]
     variables =
       snub $
-      foldMap (foldMap (uncurry hoedCallValues) . toList) hoedFunctionCalls
+      foldMap (foldMap (hoedCallValues . snd) . toList) hoedFunctionCalls
 
     lookupFunctionIndex =
       fromMaybe (error "bug in convert: lookupFunctionIndex") .
@@ -122,13 +123,13 @@ convert HoedAnalysis {..} = DebugTrace {..}
       (`HMS.lookup` HMS.fromList (zip variables [0 ..]))
 
     lookupCallIndex =
-      fromMaybe (error "bug in convert: lookupVariableIndex") .
+      fromMaybe (error "bug in convert: lookupCallIndex") .
       (`HMS.lookup` HMS.fromList (zip (map fst callsTable) [0 ..]))
 
     callsTable =
-      [ ((k, argValues), CallData {..})
+      [ (callId, CallData {..})
       | (k@HoedFunctionKey {..}, calls) <- toList sortedFunctionCalls
-      , (argValues, HoedCallDetails {..}) <- toList calls
+      , (callId, HoedCallDetails {..}) <- toList calls
       , let callFunctionId = lookupFunctionIndex k
       , let callVals =
               map (second lookupVariableIndex) $
