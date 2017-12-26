@@ -98,6 +98,7 @@ convert HoedAnalysis {..} = DebugTrace {..}
         ]
     sortedFunctionCalls =
       sortOn (\(x, _) -> (label x, arity x)) $ toList hoedFunctionCalls
+
     functions =
       [ Function {..}
       | (HoedFunctionKey {..}, _) <- sortedFunctionCalls
@@ -111,15 +112,19 @@ convert HoedAnalysis {..} = DebugTrace {..}
     variables =
       snub $
       foldMap (foldMap (uncurry hoedCallValues) . toList) hoedFunctionCalls
+
     lookupFunctionIndex =
       fromMaybe (error "bug in convert: lookupFunctionIndex") .
       (`HMS.lookup` HMS.fromList (zip (map fst sortedFunctionCalls) [0 ..]))
+
     lookupVariableIndex =
       fromMaybe (error "bug in convert: lookupVariableIndex") .
       (`HMS.lookup` HMS.fromList (zip variables [0 ..]))
+
     lookupCallIndex =
       fromMaybe (error "bug in convert: lookupVariableIndex") .
       (`HMS.lookup` HMS.fromList (zip (map fst callsTable) [0 ..]))
+
     callsTable =
       [ ((k, argValues), CallData {..})
       | (k@HoedFunctionKey {..}, calls) <- toList hoedFunctionCalls
@@ -133,6 +138,7 @@ convert HoedAnalysis {..} = DebugTrace {..}
       , let callDepends = map lookupCallIndex depends
       , let callParents = map lookupCallIndex parents
       ]
+
     calls = map snd callsTable
 
 
@@ -166,19 +172,11 @@ debug q = do
 prettyPrint = pprint . transformBi f
     where f (Name x _) = Name x NameS -- avoid nasty qualifications
 
--- | List all the type variables of kind * (or do the best you can)
-kindStar :: Type -> Q [Name]
--- in Q so we should be able to use 'reify' to do a better job
-kindStar t = return $
-    nubOrd [x | VarT x <- universe t] \\     -- find all variables
-    nubOrd [x | AppT (VarT x) _ <- universe t] -- delete the "obvious" ones
-
--- try and shove in a "Observable a =>" if we can
-adjustSig name (ForallT vars ctxt typ) = do
-  vs <- kindStar typ
+-- Add a wildcard for Observable a
+adjustSig name (ForallT vars ctxt typ) =
   return $
     SigD name $
-    ForallT vars (nub $ map (AppT (ConT ''Observable) . VarT) vs ++ ctxt) typ
+    ForallT vars (ctxt ++ [WildCardT]) typ
 adjustSig name other = adjustSig name $ ForallT [] [] other
 
 adjustValD decl@ValD{} = transformBi adjustPat decl

@@ -3,7 +3,7 @@
 A backend for the [`debug`](http://hackage.haskell.org/package/debug) package using [`Hoed`](http://hackage.haskell.org/package/Hoed) to generate the trace.
 
 Using `debug-hoed` is very similar to using `debug`.
-Turn on the `TemplateHaskell` and `ViewPatterns` extensions, import `Debug.Hoed`, indent your code and place it under a call to `debug`, e.g.:
+Turn on the `TemplateHaskell`, `PartialTypeSignatures` and `ViewPatterns` extensions, import `Debug.Hoed`, indent your code and place it under a call to `debug`, e.g.:
 
 ```haskell
 {-# LANGUAGE TemplateHaskell, ViewPatterns #-}
