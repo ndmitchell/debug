@@ -127,7 +127,7 @@ convert HoedAnalysis {..} = DebugTrace {..}
 
     callsTable =
       [ ((k, argValues), CallData {..})
-      | (k@HoedFunctionKey {..}, calls) <- toList hoedFunctionCalls
+      | (k@HoedFunctionKey {..}, calls) <- toList sortedFunctionCalls
       , (argValues, HoedCallDetails {..}) <- toList calls
       , let callFunctionId = lookupFunctionIndex k
       , let callVals =
