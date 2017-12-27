@@ -11,6 +11,8 @@ module Debug
   ( Observable(..)
   , runO
   , getDebugTrace
+  , HoedOptions(..)
+  , defaultHoedOptions
   , debug
   , debugViewTrace
   , debugJSONTrace
@@ -40,11 +42,12 @@ import Language.Haskell.TH.Syntax
 
 -- | Runs the program collecting a debugging trace and then opens a web browser to inspect it.
 runO :: IO () -> IO ()
-runO program = getDebugTrace program >>= debugViewTrace
+runO program = getDebugTrace defaultHoedOptions {prettyWidth = 160, verbose = Verbose} program >>= debugViewTrace
 
 -- | Runs the program collecting a debugging trace
-getDebugTrace :: IO () -> IO DebugTrace
-getDebugTrace program = convert <$> runO' defaultHoedOptions{prettyWidth = 160} program
+getDebugTrace :: HoedOptions -> IO () -> IO DebugTrace
+getDebugTrace hoedOptions program =
+  convert <$> runO' hoedOptions program
 
 type a :-> b = HM.MonoidalHashMap a b
 

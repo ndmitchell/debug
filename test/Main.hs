@@ -40,11 +40,8 @@ debug [d|
 
 main = do
     _ <- return ()
-    trace <- getDebugTrace $ putStrLn$ quicksort (<) "haskell"
+    trace <- getDebugTrace defaultHoedOptions $ putStrLn$ quicksort (<) "haskell"
     debugPrintTrace trace
     B.writeFile "trace.js" . ("var trace =\n" <>) . (<> ";") $ debugJSONTrace trace
     debugSaveTrace "trace.html" trace
     print $ foo [1::Int]
-
-gzip :: Data a => (forall b . (Data b) => b -> b -> c) -> a -> a -> Maybe [c]
-gzip _ _ _ = Nothing
