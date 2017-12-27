@@ -1,0 +1,20 @@
+name:                debug-pp
+version:             0.1.0.0
+#synopsis:
+description:         A preprocessor to automate the debug instrumentation of a module
+homepage:            https://github.com/pepeiborra/debug-hoed-pp#readme
+license:             BSD3
+author:              Pepe Iborra
+maintainer:          pepeiborra@gmail.com
+copyright:           All Rights Reserved
+category:            Debugging
+extra-source-files:
+- README.md
+
+dependencies:
+  - base >= 4.7 && < 5
+  
+executables:
+  debug-pp:
+    source-dirs:      src
+    main:             Main.hs
