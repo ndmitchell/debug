@@ -44,7 +44,7 @@ runO program = getDebugTrace program >>= debugViewTrace
 
 -- | Runs the program collecting a debugging trace
 getDebugTrace :: IO () -> IO DebugTrace
-getDebugTrace program = convert <$> runO' defaultHoedOptions program
+getDebugTrace program = convert <$> runO' defaultHoedOptions{prettyWidth = 160} program
 
 type a :-> b = HM.MonoidalHashMap a b
 
@@ -67,6 +67,15 @@ data HoedCallDetails = HoedCallDetails
 hoedCallValues :: HoedCallDetails -> [String]
 hoedCallValues HoedCallDetails{..} = result : (argValues ++ clauseValues)
 
+getRelatives rel v =
+      [ stmtIdentifier
+        | v'@Vertex {vertexStmt = CompStmt {stmtIdentifier, stmtDetails = StmtLam {}}} <- rel v
+      ] ++
+      [ callKey
+        | v'@Vertex {vertexStmt = CompStmt {stmtDetails = StmtCon {}}} <- rel v
+        , callKey <- getRelatives rel v'
+      ]
+
 extractHoedCall :: CompTree -> Vertex -> Maybe (HoedFunctionKey, HoedCallKey, HoedCallDetails)
 extractHoedCall hoedCompTree v@Vertex {vertexStmt = c@CompStmt {stmtDetails = StmtLam {..}, ..}} =
   Just
@@ -79,16 +88,8 @@ extractHoedCall hoedCompTree v@Vertex {vertexStmt = c@CompStmt {stmtDetails = St
       | Vertex {vertexStmt = CompStmt {stmtLabel, stmtDetails = StmtCon {..}}} <-
           succs hoedCompTree v
       ]
-    depends =
-      [ callKey
-        | v'@Vertex {vertexStmt = CompStmt {stmtLabel, stmtDetails = StmtLam {..}}} <- succs hoedCompTree v
-        , Just (fnKey, callKey, _) <- [extractHoedCall hoedCompTree v']
-      ]
-    parents =
-      [ callKey
-        | v'@Vertex {vertexStmt = CompStmt {stmtLabel, stmtDetails = StmtLam {..}}} <- preds hoedCompTree v
-        , Just (fnKey, callKey, _) <- [extractHoedCall hoedCompTree v']
-      ]
+    depends = snub $ getRelatives (succs hoedCompTree) v
+    parents = snub $ getRelatives (preds hoedCompTree) v
 
 extractHoedCall _ _ = Nothing
 
@@ -148,7 +149,7 @@ convert HoedAnalysis {..} = DebugTrace {..}
 
     calls = map snd callsTable
 
-
+snub :: Ord a => [a] -> [a]
 snub = map head . group . sort
 
 ----------------------------------------------------------------------------
