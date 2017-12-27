@@ -101,6 +101,7 @@ function showCallStack(me)
         cursor = temp;
         for(i in depends)
             cursor.append($(depends[i]));
+        $("#function-depends-section").show();
     }
  }
 function renderCall(i)
