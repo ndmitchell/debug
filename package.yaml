@@ -13,11 +13,11 @@ extra-source-files:
 
 dependencies:
   - base >= 4.7 && < 5
-  - debug
 
 library:
     source-dirs:      src
     dependencies: 
+      - debug
       - Hoed >= 0.4.1
       - extra
       - hashable

@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -6,10 +7,10 @@ module Main where
 
 import qualified Data.ByteString.Lazy as B
 import qualified Data.List as List
+import Data.Data
 import Data.Monoid
-import Debug.Backend.Hoed
+import Debug
 import qualified Debug.Hoed as Hoed
-import Debug.Record hiding (getDebugTrace)
 
 debug [d|
     quicksort :: (a -> a -> Bool) -> [a] -> [a]
@@ -43,4 +44,7 @@ main = do
     debugPrintTrace trace
     B.writeFile "trace.js" . ("var trace =\n" <>) . (<> ";") $ debugJSONTrace trace
     debugSaveTrace "trace.html" trace
-    print $ foo [1]
+    print $ foo [1::Int]
+
+gzip :: Data a => (forall b . (Data b) => b -> b -> c) -> a -> a -> Maybe [c]
+gzip _ _ _ = Nothing

@@ -1,20 +1,26 @@
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeOperators #-}
-module Debug.Backend.Hoed
+module Debug
   ( Observable(..)
   , runO
-  , Debug.Backend.Hoed.getDebugTrace
+  , getDebugTrace
   , debug
+  , debugViewTrace
+  , debugJSONTrace
+  , debugPrintTrace
+  , debugSaveTrace
   ) where
 
 import Control.Monad
 import Data.Bifunctor
+import Data.Char
 import Data.Generics.Uniplate.Data
 import Data.Graph.Libgraph
 import qualified Data.HashMap.Monoidal as HM
@@ -23,7 +29,7 @@ import Data.Hashable
 import Data.List
 import Data.List.Extra
 import Data.Maybe
-import Debug.Record as Debug
+import Debug.Record as D hiding (getDebugTrace)
 import Debug.Hoed hiding (runO)
 import Debug.Hoed.CompTree
 import Debug.Hoed.Render
@@ -34,7 +40,7 @@ import Language.Haskell.TH.Syntax
 
 -- | Runs the program collecting a debugging trace and then opens a web browser to inspect it.
 runO :: IO () -> IO ()
-runO program = program >> Debug.getDebugTrace >>= debugViewTrace
+runO program = getDebugTrace program >>= debugViewTrace
 
 -- | Runs the program collecting a debugging trace
 getDebugTrace :: IO () -> IO DebugTrace
@@ -145,27 +151,67 @@ convert HoedAnalysis {..} = DebugTrace {..}
 
 snub = map head . group . sort
 
--- | A @TemplateHaskell@ wrapper to convert a normal function into a traced function.
+----------------------------------------------------------------------------
+-- Template Haskell
+
+-- | A @TemplateHaskell@ wrapper to convert normal functions into traced functions, and add 'Observable' instances to 'Generic' datatypes.
 debug :: Q [Dec] -> Q [Dec]
 debug q = do
   decs <- q
-  names <- sequence [ (n,) <$> newName(nameBase n ++ "Debug") | FunD n _ <- decs]
-  fmap concat $ forM decs $ \dec ->
-    case dec of
-      FunD n clauses -> do
-        let Just n' = lookup n names
-            nb = nameBase n
+  let askSig x =
+        listToMaybe $
+        mapMaybe
+          (\case
+             SigD y s
+               | x == y -> Just s
+             _ -> Nothing)
+          decs
+  let checkSig = maybe True (not . hasRankNTypes) . askSig
+  let sourceNames =
+        mapMaybe
+          (\case
+             FunD n _ -> Just n
+             ValD (VarP n) _ _ -> Just n
+             _ -> Nothing)
+          decs
+  names <-
+    sequence [(n, ) <$> newName (mkDebugName (nameBase n)) | n <- sourceNames]
+  fmap concat $
+    forM decs $ \dec ->
+      case dec of
+        ValD (VarP n) b clauses
+          | checkSig n -> do
+            let Just n' = lookup n names
+                nb = nameBase n
             -- HACK We embed the source code of the function in the label,
             --      which is then unpacked by 'convert'
-            label = (nb ++ "\n" ++ prettyPrint dec)
-        newDecl <- funD n [clause [] (normalB [| observe label $(varE n')|]) []]
-        let clauses' = transformBi adjustValD clauses
-        return [newDecl, FunD n' clauses']
-      SigD n ty | Just n' <- lookup n names -> do
-        dec' <- adjustSig n ty
-        return [dec']
-      _ ->
-        return [dec]
+                label = (nb ++ "\n" ++ prettyPrint dec)
+            newDecl <-
+              funD n [clause [] (normalB [|observe label $(varE n')|]) []]
+            let clauses' = transformBi adjustValD clauses
+            return [newDecl, ValD (VarP n') b clauses']
+        FunD n clauses
+          | checkSig n -> do
+            let Just n' = lookup n names
+                nb = nameBase n
+            -- HACK We embed the source code of the function in the label,
+            --      which is then unpacked by 'convert'
+                label = (nb ++ "\n" ++ prettyPrint dec)
+            newDecl <-
+              funD n [clause [] (normalB [|observe label $(varE n')|]) []]
+            let clauses' = transformBi adjustValD clauses
+            return [newDecl, FunD n' clauses']
+        SigD n ty
+          | not (hasRankNTypes ty)
+          , Just n' <- lookup n names -> do
+            dec1 <- adjustSig n ty
+            dec2 <- adjustSig n' ty
+            return [dec1, dec2]
+        _ -> return [dec]
+
+mkDebugName n@(c:_)
+  | isAlpha c = n ++ "Debug"
+  | otherwise = n ++ "??"
 
 ----------------------------------------------------------
 -- With a little help from Neil Mitchell's debug package
@@ -179,6 +225,10 @@ adjustSig name (ForallT vars ctxt typ) =
     SigD name $
     ForallT vars (ctxt ++ [WildCardT]) typ
 adjustSig name other = adjustSig name $ ForallT [] [] other
+
+hasRankNTypes (ForallT vars ctxt typ) = hasRankNTypes' typ
+hasRankNTypes typ = hasRankNTypes' typ
+hasRankNTypes' typ = not $ null [ () | ForallT{} <- universe typ]
 
 adjustValD decl@ValD{} = transformBi adjustPat decl
 adjustValD other       = other
