@@ -250,6 +250,8 @@ getDebugTrace = do
       vars <- readIORef vars
       let callFunctionId   = infoId HM.! info
           callVals = map (second varId) vars
+          callDepends = [] -- available in the Hoed backend but not in this one
+          callParents = [] -- available in the Hoed backend but not in this one
       return CallData{..}
   return $ DebugTrace infos vars callEntries
 
@@ -260,19 +262,32 @@ instance ToJSON DebugTrace
 data CallData = CallData
   { callFunctionId :: Int       -- ^ An index into the 'functions' table
   , callVals :: [(String, Int)] -- ^ The value name tupled with an index into the 'variables' table
+  , callDepends :: [Int]        -- ^ Indexes into the 'calls' table
+  , callParents :: [Int]        -- ^ Indexes into the 'calls' table
   }
   deriving (Eq, Generic, Show)
 
 instance FromJSON CallData where
-  parseJSON (Object v) = CallData <$> v .: "" <*> vals
+  parseJSON (Object v) =
+    CallData <$> v .: "" <*> vals <*> v .: "$depends" <*> v .: "$parents"
     where
-      vals = mapM (\(k,x) -> (T.unpack k,) <$> parseJSON x) $ HM.toList v
+      vals =
+        sequence
+          [ (T.unpack k, ) <$> parseJSON x
+          | (k, x) <- HM.toList v
+          , not(T.null k)
+          , k /= "$depends"
+          , k /= "$parents"
+          ]
   parseJSON invalid = typeMismatch "CallData" invalid
 
 instance ToJSON CallData where
   toJSON CallData {..} =
     object $
-    "" .= callFunctionId : map (uncurry (.=) . first T.pack) callVals
+    "" .= callFunctionId :
+    ["$depends" .= toJSON callDepends | not(null callDepends)] ++
+    ["$parents" .= toJSON callParents | not(null callParents)] ++
+    map (uncurry (.=) . first T.pack) callVals
 
 functionJsonOptions = defaultOptions{fieldLabelModifier = f}
     where
