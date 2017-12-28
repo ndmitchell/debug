@@ -36,6 +36,7 @@ import Data.Hashable
 import Data.IORef
 import Data.List.Extra
 import Data.Maybe
+import Data.Monoid
 import Data.Tuple.Extra
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.HashMap.Strict as HM
@@ -51,7 +52,7 @@ import Text.Show.Functions() -- Make sure the Show for functions instance exists
 import qualified Language.Javascript.JQuery as JQuery
 import Web.Browser
 import Paths_debug
-import Text.PrettyPrint.ANSI.Leijen as PP hiding ((<$>))
+import Text.PrettyPrint.ANSI.Leijen as PP hiding ((<$>), (<>))
 import Text.Read
 
 
