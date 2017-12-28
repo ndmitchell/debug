@@ -1,5 +1,9 @@
 build: off
 cache: "c:\\sr -> appveyor.yml"
 
+artifacts:
+- path: trace.html
+  name: trace
+
 test_script:
 - ps: Invoke-Expression (Invoke-WebRequest 'https://raw.githubusercontent.com/ndmitchell/neil/master/appveyor.ps1')
