@@ -29,8 +29,8 @@ debug [d|
     type1 :: m a -> m a
     type1 = id
 
-    type2 :: Int -> m Int
-    type2 _ = undefined
+--    type2 :: Int -> m Int
+--    type2 _ = undefined
     |]
 
 quicksort' :: (Ord a, Show a) => [a] -> [a]
@@ -48,5 +48,5 @@ main = do
     writeFile "trace.js" . ("var trace =\n" ++) . (++ ";") =<< debugJSON
     debugSave "trace.html"
     evaluate type1
-    evaluate type2
+--    evaluate type2
     print $ quicksort' "haskell"
