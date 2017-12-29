@@ -1,3 +1,6 @@
+[![Travis Build Status](https://travis-ci.org/pepeiborra/debug-pp.svg)](https://travis-ci.org/pepeiborra/debug-pp)
+[![Hackage](https://img.shields.io/hackage/v/debug-pp.svg)](https://hackage.haskell.org/package/debug-pp)
+[![Stackage Nightly](http://stackage.org/package/debug-pp/badge/nightly)](http://stackage.org/nightly/package/debug-pp)
 # debug-pp
 
 A preprocessor for streamlining the `debug` instrumentation of a module or a package.
