@@ -5,7 +5,7 @@ A preprocessor for streamlining the `debug` instrumentation of a module or a pac
 Description
 ---------------
 
-`debug-pp` is a Haskell source preprocessor that performs the steps a programmer would need to follow in order to debug a module with the `debug` package. That is:
+`debug-pp` is a Haskell source preprocessor that performs the steps a programmer would need to follow in order to debug a module with the [`debug`](http://hackage.haskell.org/package/debug) package. That is:
 * append an import for the `Debug` module, and 
 * wrap the body in a `debug` splice using a TH declaration quasiquote. 
 
@@ -37,3 +37,12 @@ Library
   ...
   build-tool-depends: debug-pp:debug-pp
 ```
+
+Motivation
+-------------
+
+* Debugging individual functions is often impractical due to the declaration groups [restriction](http://ghc.readthedocs.io/en/8.0.1/glasgow_exts.html#ghc-flag--XTemplateHaskellQuotes) of Template Haskell. Therefore, it's often easier to debug an entire module.
+
+* However, error messages are much worse for TH quoted code. Errors like `Not in scope: data constructor Foo in line X` become `Not in scope: Foo, in the TH quotation ENTIRE MODULE HERE`. 
+
+* Personally, quoting/unquoting the module by hand is annoying. Having a preprocessor do this for me is convenient, and can be easily tied to a Cabal flag ora stack command line arg.
