@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeOperators #-}
 module Debug
   ( Observable(..)
+  , observe
   , runO
   , getDebugTrace
   , HoedOptions(..)
