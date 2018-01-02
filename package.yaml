@@ -2,7 +2,7 @@ name:                debug-pp
 version:             0.1.0.0
 #synopsis:
 description:         A preprocessor to automate the instrumentation of a module for the debug package
-synopsis:            A preprocessor to automate the instrumentation of a module for the debug package
+synopsis:            A preprocessor for the debug package
 homepage:            https://github.com/pepeiborra/debug-hoed-pp#readme
 license:             BSD3
 author:              Pepe Iborra
