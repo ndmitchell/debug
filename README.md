@@ -46,17 +46,17 @@ The call to `debugView` starts a web browser to view the recorded information, l
 ![Debug view output](debug.png)
 
 ## Notes
-Calling the debugged function inside GHCi records the results for viewing inside the UI.  
-The function can be called multiple times with different parameters, and the results of each 
+
+Calling the debugged function inside GHCi records the results for viewing inside the UI.
+The function can be called multiple times with different parameters, and the results of each
 individual run can be selected inside the UI.
 
-You can create multiple debug [d|...] blocks inside a module and you can also put more than one 
+You can create multiple `debug [d|...]` blocks inside a module and you can also put more than one
 function inside a single block.
 
 A function being debugged can refer to another function also being debugged, but due to a limitation
-in Template Haskell the definition of the function being called must occur above the point of its 
+of Template Haskell, the definition of the function being called must occur above the point of its
 reference in the source module.
-
 
 ## Limitations
 
