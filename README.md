@@ -28,9 +28,13 @@ main = runO $ putStrLn $ quicksort "haskell"
 
 The call to `runO` starts a web browser to view the information recorded by Hoed, similar to the debug package.
 
-## Noteworthy
+## Requirements
 
-- `Hoed` relies on the `Observable` class (which comes with a generic derivation) to collect the trace. Types without an `Observable` instance will fall back to the default one, which prints `<?>` for non observable types.
+- Polymorphic functions must have type signatures, otherwise GHC will fail to infer an unambiguous type when annotated for debugging.
+- Polymorphic numeric literals must be annotated with a specific type, for the same reason as above
+- Types under observation must be given an 'Observable' instance, otherwise they will fall back to the default one, which prints `<?>` for non observable types. 
+
+The 'Observable' class is derivable for 'Generic' types, although you may wish to use 'observeBase' for types with a non trivial 'Show' instance, or 'observeOpaque' for non observable types. 
 
 ## Motivation
 

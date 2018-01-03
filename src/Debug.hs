@@ -159,7 +159,7 @@ snub = map head . group . sort
 ----------------------------------------------------------------------------
 -- Template Haskell
 
--- | A @TemplateHaskell@ wrapper to convert normal functions into traced functions, and add 'Observable' instances to 'Generic' datatypes.
+-- | A @TemplateHaskell@ wrapper to convert normal functions into traced functions.
 debug :: Q [Dec] -> Q [Dec]
 debug q = do
   decs <- q
