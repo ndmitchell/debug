@@ -162,6 +162,10 @@ snub = map head . group . sort
 -- | A @TemplateHaskell@ wrapper to convert normal functions into traced functions.
 debug :: Q [Dec] -> Q [Dec]
 debug q = do
+  missing <- filterM (fmap not . isExtEnabled) [ViewPatterns, PartialTypeSignatures]
+  when (missing /= []) $
+      error $ "\ndebug [d| ... |] requires additional extensions:\n" ++
+              "{-# LANGUAGE " ++ intercalate ", " (map show missing) ++ " #-}\n"
   decs <- q
   let askSig x =
         listToMaybe $
@@ -228,7 +232,7 @@ prettyPrint = pprint . transformBi f
 adjustSig name (ForallT vars ctxt typ) =
   return $
     SigD name $
-    ForallT vars (ctxt ++ [WildCardT]) typ
+    ForallT vars (delete WildCardT ctxt ++ [WildCardT]) typ
 adjustSig name other = adjustSig name $ ForallT [] [] other
 
 hasRankNTypes (ForallT vars ctxt typ) = hasRankNTypes' typ
