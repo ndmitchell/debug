@@ -83,7 +83,6 @@ adjustDec askSig x@(SigD name (ForallT vars ctxt typ)) = return $
     SigD name $ ForallT vars (delete WildCardT ctxt ++ [WildCardT]) typ
 adjustDec askSig (SigD name typ) = adjustDec askSig $ SigD name $ ForallT [] [] typ
 adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_)) = do
-    runIO $ putStrLn $ "adjustDec (FunD): " ++ (show . ppr) o
     inner <- newName "inner"
     tag <- newName "tag"
     args <- sequence [newName $ "arg" ++ show i | i <- [1 .. length arity]]
@@ -102,44 +101,35 @@ adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_)) = do
 adjustDec askSig x = return x
 
 transformApps :: Name -> [Clause] -> Q [Clause]
-transformApps tag clauses = sequence $ map (appsFromClause tag) clauses
+transformApps tag clauses = mapM (appsFromClause tag) clauses
 
 appsFromClause :: Name -> Clause -> Q Clause
 appsFromClause tag cl@(Clause pats body decs) = do
-    runIO $ putStrLn $ "appsFromClause: " ++ (show . ppr) cl  
     newBody <- appsFromBody tag body
     return $ Clause pats newBody decs
 
 appsFromBody :: Name -> Body -> Q Body
 appsFromBody _ b@(GuardedB _) = return b -- TODO: implement guards
 appsFromBody tag (NormalB e) = do 
-    runIO $ putStrLn $ "appsFromBody: NormalB e: " ++ (show . ppr) e
     newExp <- appsFromExp tag e
     return (NormalB newExp)
 
 appsFromExp :: Name -> Exp -> Q Exp
 appsFromExp tag e@(AppE e1 e2) = do
-    runIO $ putStrLn $ "appsFromExp: AppE ("  ++ (show . ppr) e1 ++ ") and (" ++ (show . ppr) e2 ++ ")" 
     newE1 <- appsFromExp tag e1
     newE2 <- appsFromExp tag e2
-    runIO $ putStrLn $ "appsFromExp: newE1 after recursion: " ++ (show . ppr) newE1
-    adjustedE1 <- adjustApp tag (AppE newE1 newE2)
-    return adjustedE1
+    adjustApp tag (AppE newE1 newE2)
 appsFromExp tag e@(LetE decs exp) = do
-    runIO $ putStrLn $ "appsFromExp: LetE decs: (count=" ++ show (length decs) ++ ") and exp: " ++ (show . ppr) exp 
     newDecs <- sequence $ fmap (appsFromDec tag) decs   
     newExp <- appsFromExp tag exp
     return $ LetE newDecs newExp
 appsFromExp tag e@(InfixE e1May e2 e3May) = do
-    runIO $ putStrLn $ "appsFromExp InfixE: " ++ (show . ppr) e 
     newE1 <- appsFromExpMay tag e1May
     newE2 <- appsFromExp tag e2
     newE3 <- appsFromExpMay tag e3May
-    runIO $ putStrLn "skipping infix adjustment.."
-    return $ InfixE newE1 newE2 newE3
-appsFromExp tag e = do 
-    runIO $ putStrLn $ "appsFromExp (not handled): " ++ (show . ppr) e 
-    return e  
+    adjustedE2 <- adjustApp tag (InfixE newE1 newE2 newE3)
+    return $ InfixE newE1 adjustedE2 newE3
+appsFromExp tag e = return e  
 
 appsFromExpMay :: Name -> Maybe Exp -> Q (Maybe Exp)
 appsFromExpMay tag Nothing = return Nothing
@@ -147,43 +137,44 @@ appsFromExpMay tag (Just e) = sequence $ Just $ appsFromExp tag e
 
 appsFromDec :: Name -> Dec -> Q Dec
 appsFromDec tag d@(ValD pat body dec) = do
-    runIO $ putStrLn $ "appsFromDec: " ++ (show . ppr) d
     newBody <- appsFromBody tag body
     return $ ValD pat newBody dec
-appsFromDec tag d@(FunD name subClauses) = do
-    runIO $ putStrLn $ "appsFromDec: <fun name>..not printed" ++ (show . ppr) name
-    return d
-appsFromDec _ d = do 
-    runIO $ putStrLn "appsFromDec - Dec other than FunD..not printed" 
-    return d
-
+appsFromDec tag d@(FunD name subClauses) = return d
+appsFromDec _ d = return d
 
 adjustApp :: Name -> Exp -> Q Exp
 adjustApp tag (AppE e1 e2) = do 
-    runIO $ putStrLn $ "AdjustApp: e1 initially: " ++ (show . ppr) e1
     let displayName = expDisplayName e1
-    runIO $ putStrLn $ "...displayName: " ++ displayName
-    e1n <- newName $ displayName 
-    runIO $ putStrLn $ "...after newName..." ++ show e1n
-    --let viewP = ViewP (VarE 'var `AppE` VarE tag `AppE` toLit e1n) (VarP e1n)
+    e1n <- newName displayName 
     let viewP = ViewP (VarE 'var `AppE` VarE tag `AppE` LitE (StringL displayName)) (VarP e1n)
-    let result = LetE [ValD viewP (NormalB (AppE e1 e2)) []] (VarE e1n)  
-    runIO $ putStrLn $ "...after transform: " ++ (show . ppr) result
+    let result = LetE [ValD viewP (NormalB (AppE e1 e2)) []] (VarE e1n)
     return result
+adjustApp tag e@(InfixE e1May e2 e3May) = do
+    let displayName = infixExpDisplayName e2
+    e2n <- newName displayName 
+    let viewP = ViewP (VarE 'var `AppE` VarE tag `AppE` LitE (StringL displayName)) (VarP e2n)
+    let _result = LetE [ValD viewP (NormalB (InfixE e1May e2 e3May)) []] (VarE e2n)  
+    return e2 -- when fixed, ---> return _result
 adjustApp _ e = return e
 
 -- Find the (unqualified) function name to use as the UI display name
 expDisplayName :: Exp -> String
 expDisplayName e = 
     let name = removeLet $ (show . ppr) e
-    in '_' : removeExtraDigits (takeWhileEnd (\c -> c /= '.') ((head . words) name))    
+    in '_' : removeExtraDigits (takeWhileEnd (/= '.') ((head . words) name))    
+
+-- Same as expDisplayName but for infix functions    
+infixExpDisplayName :: Exp -> String
+infixExpDisplayName e = 
+    let name = removeLet $ (show . ppr) e
+    in "_(" ++ removeExtraDigits (takeWhileEnd (/= '.') ((head . words) name)) 
 
 -- discover the function name inside (possibly nested) let expressions
 -- transform strings of the form "let (var tag "f" -> f) = f x in f_1" into "f'" 
 -- each level of nesting gets a ' (prime) appeneded to the name
 removeLet :: String -> String
 removeLet str = loop "" str where
-   loop suffix s = if "let" `isInfixOf` (fst (word1 s)) 
+   loop suffix s = if "let" `isInfixOf` fst (word1 s) 
         then case stripInfix " = " s of
             Just pair -> loop ('\'' : suffix) (snd pair)
             Nothing -> s    -- this shouldn't happen...
