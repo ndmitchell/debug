@@ -120,7 +120,7 @@ appsFromExp tag e@(AppE e1 e2) = do
     newE2 <- appsFromExp tag e2
     adjustApp tag (AppE newE1 newE2)
 appsFromExp tag e@(LetE decs exp) = do
-    newDecs <- sequence $ fmap (appsFromDec tag) decs   
+    newDecs <- traverse (appsFromDec tag) decs   
     newExp <- appsFromExp tag exp
     return $ LetE newDecs newExp
 appsFromExp tag e@(InfixE e1May e2 e3May) = do
