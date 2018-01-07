@@ -66,4 +66,3 @@ test-suite debug-test
         base == 4.*,
         extra,
         debug
-
