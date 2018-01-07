@@ -169,9 +169,9 @@ infixExpDisplayName e =
     let name = removeLet $ (show . ppr) e
     in "_(" ++ removeExtraDigits (takeWhileEnd (/= '.') ((head . words) name)) 
 
--- discover the function name inside (possibly nested) let expressions
--- transform strings of the form "let (var tag "f" -> f) = f x in f_1" into "f'" 
--- each level of nesting gets a ' (prime) appeneded to the name
+-- | Discover the function name inside (possibly nested) let expressions
+--   Transform strings of the form "let (var tag "f" -> f) = f x in f_1" into "f'" 
+--   Each level of nesting gets a ' (prime) appeneded to the name
 removeLet :: String -> String
 removeLet str = loop "" str where
    loop suffix s = if "let" `isInfixOf` fst (word1 s) 
@@ -180,7 +180,7 @@ removeLet str = loop "" str where
             Nothing -> s    -- this shouldn't happen...
         else fst (word1 s) ++ suffix 
 
---remove possible _n suffix from discovered function names
+-- | Remove possible _n suffix from discovered function names
 removeExtraDigits :: String -> String
 removeExtraDigits str = case stripInfixEnd "_" str of
     Just s -> fst s
