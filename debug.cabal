@@ -55,6 +55,8 @@ library
     other-modules:
         Debug.Variables
         Paths_debug
+        
+    ghc-options: -ddump-splices 
 
 test-suite debug-test
     default-language: Haskell2010
@@ -66,3 +68,6 @@ test-suite debug-test
         base == 4.*,
         extra,
         debug
+
+    ghc-options: -ddump-splices 
+
