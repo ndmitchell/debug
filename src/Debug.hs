@@ -51,7 +51,8 @@ module Debug(
     -- * Clear a trace
     debugClear,
     -- * Exported for tests only
-    removeLet
+    removeLet,
+    removeExtraDigits
     ) where
 
 import Control.Monad.Extra
@@ -156,6 +157,21 @@ appsFromDec _ d = do
     runIO $ putStrLn "appsFromDec - Dec other than FunD..not printed" 
     return d
 
+
+adjustApp :: Name -> Exp -> Q Exp
+adjustApp tag (AppE e1 e2) = do 
+    runIO $ putStrLn $ "AdjustApp: e1 initially: " ++ (show . ppr) e1
+    let displayName = expDisplayName e1
+    runIO $ putStrLn $ "...displayName: " ++ displayName
+    e1n <- newName $ displayName 
+    runIO $ putStrLn $ "...after newName..." ++ show e1n
+    --let viewP = ViewP (VarE 'var `AppE` VarE tag `AppE` toLit e1n) (VarP e1n)
+    let viewP = ViewP (VarE 'var `AppE` VarE tag `AppE` LitE (StringL displayName)) (VarP e1n)
+    let result = LetE [ValD viewP (NormalB (AppE e1 e2)) []] (VarE e1n)  
+    runIO $ putStrLn $ "...after transform: " ++ (show . ppr) result
+    return result
+adjustApp _ e = return e
+
 -- Find the (unqualified) function name to use as the UI display name
 expDisplayName :: Exp -> String
 expDisplayName e = 
@@ -178,20 +194,6 @@ removeExtraDigits :: String -> String
 removeExtraDigits str = case stripInfixEnd "_" str of
     Just s -> fst s
     Nothing -> str
-
-    -- stripInfixEnd :: Eq a => [a] -> [a] -> Maybe ([a], [a]) 
-
-adjustApp :: Name -> Exp -> Q Exp
-adjustApp tag (AppE e1 e2) = do
-    runIO $ putStrLn $ "AdjustApp: e1 initially: " ++ (show . ppr) e1
-    runIO $ putStrLn $ "...displayName: " ++ (expDisplayName e1)
-    e1n <- newName $ expDisplayName e1 
-    runIO $ putStrLn $ "...after newName..." ++ show e1n
-    let viewP = ViewP (VarE 'var `AppE` VarE tag `AppE` toLit e1n) (VarP e1n)
-    let result = LetE [ValD viewP (NormalB (AppE e1 e2)) []] (VarE e1n)  
-    runIO $ putStrLn $ "...after transform: " ++ (show . ppr) result
-    return result
-adjustApp _ e = return e
 
 prettyPrint = pprint . transformBi f
     where f (Name x _) = Name x NameS -- avoid nasty qualifications

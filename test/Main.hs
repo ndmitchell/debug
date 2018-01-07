@@ -66,7 +66,9 @@ main = do
 --    evaluate type2
     print $ quicksort' "haskell"
 
-    --this can be an hspec test...
+    --the following tests can be an hspec tests...
+    putStrLn $ removeExtraDigits "_quicksort_0"
+    
     putStrLn $ "let0: " ++ removeLet let0   -- f 
     putStrLn $ "let1: " ++ removeLet let1   -- select_2'
     putStrLn $ "let2: " ++ removeLet let2   -- Data.Foldable.foldr'
