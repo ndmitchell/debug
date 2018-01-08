@@ -10,7 +10,7 @@
 module Debug
   ( Observable(..)
   , observe
-  , runO
+  , debugRun
   , getDebugTrace
   , HoedOptions(..)
   , defaultHoedOptions
@@ -33,7 +33,7 @@ import Data.Hashable
 import Data.List
 import Data.List.Extra
 import Data.Maybe
-import Debug.Record as D hiding (getDebugTrace)
+import Debug.Record as D (DebugTrace(..), Function(..), CallData(..), debugViewTrace, debugJSONTrace, debugSaveTrace, debugPrintTrace)
 import Debug.Hoed hiding (runO)
 import Debug.Hoed.CompTree
 import Debug.Hoed.Render
@@ -43,8 +43,12 @@ import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 
 -- | Runs the program collecting a debugging trace and then opens a web browser to inspect it.
-runO :: IO () -> IO ()
-runO program = getDebugTrace defaultHoedOptions {prettyWidth = 160, verbose = Verbose} program >>= debugViewTrace
+--
+--   @ main = debugRun $ do
+--       ...
+--   @
+debugRun :: IO () -> IO ()
+debugRun program = getDebugTrace defaultHoedOptions {prettyWidth = 160, verbose = Verbose} program >>= debugViewTrace
 
 -- | Runs the program collecting a debugging trace
 getDebugTrace :: HoedOptions -> IO () -> IO DebugTrace
