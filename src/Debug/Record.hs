@@ -14,6 +14,7 @@ module Debug.Record(
     Call,
     funInfo, fun, var,
     debugClear,
+    debugRun,
     -- * Viewing
     debugPrint, debugPrintTrace,
     debugJSON, debugJSONTrace,
@@ -89,6 +90,14 @@ debugClear = do
 --   in a human-readable format.
 debugPrint :: IO ()
 debugPrint = getDebugTrace >>= debugPrintTrace
+
+-- | Run a computation and open a browser window showing observed function calls.
+--
+--   @ main = debugRun $ do
+--       ...
+--   @
+debugRun :: IO a -> IO a
+debugRun = bracket_ debugClear debugView
 
 -- | Print information about the observed function calls to 'stdout',
 --   in a human-readable format.

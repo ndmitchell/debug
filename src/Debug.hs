@@ -45,7 +45,7 @@
 --   @TemplateHaskell@) see "Debug.Record".
 module Debug(
     -- * Generate trace
-    debug,
+    debug, debugRun,
     -- * View a trace
     debugView, debugSave, debugPrint,
     -- * Clear a trace
