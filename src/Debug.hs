@@ -49,17 +49,15 @@ module Debug(
     -- * View a trace
     debugView, debugSave, debugPrint,
     -- * Clear a trace
-    debugClear,
-    -- * Exported for tests only
-    removeLet,
-    removeExtraDigits
+    debugClear
     ) where
 
 import Control.Monad.Extra
 import Data.Generics.Uniplate.Data
-import Data.List.Extra
+import Data.List.Extra   
 import Data.Maybe
 import Debug.Record
+import Debug.Util
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 
@@ -168,23 +166,6 @@ infixExpDisplayName :: Exp -> String
 infixExpDisplayName e = 
     let name = removeLet $ (show . ppr) e
     in "_(" ++ removeExtraDigits (takeWhileEnd (/= '.') ((head . words) name)) 
-
--- | Discover the function name inside (possibly nested) let expressions
---   Transform strings of the form "let (var tag "f" -> f) = f x in f_1" into "f'" 
---   Each level of nesting gets a ' (prime) appeneded to the name
-removeLet :: String -> String
-removeLet str = loop "" str where
-   loop suffix s = if "let" `isInfixOf` fst (word1 s) 
-        then case stripInfix " = " s of
-            Just pair -> loop ('\'' : suffix) (snd pair)
-            Nothing -> s    -- this shouldn't happen...
-        else fst (word1 s) ++ suffix 
-
--- | Remove possible _n suffix from discovered function names
-removeExtraDigits :: String -> String
-removeExtraDigits str = case stripInfixEnd "_" str of
-    Just s -> fst s
-    Nothing -> str
 
 prettyPrint = pprint . transformBi f
     where f (Name x _) = Name x NameS -- avoid nasty qualifications

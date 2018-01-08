@@ -8,6 +8,7 @@ module Main(main) where
 
 import Debug
 import Debug.Record
+import Debug.Util
 import Control.Exception.Extra
 
 debug [d|

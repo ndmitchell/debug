@@ -51,6 +51,7 @@ library
     exposed-modules:
         Debug
         Debug.Record
+        Debug.Util
 
     other-modules:
         Debug.Variables

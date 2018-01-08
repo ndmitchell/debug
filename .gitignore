@@ -1,6 +1,5 @@
 /dist/
 /stack.yaml
-ghcid.txt
 trace.js
 trace.html
 .stack-work/
