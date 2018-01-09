@@ -28,6 +28,7 @@ import Data.Generics.Uniplate.Data
 import Data.Graph.Libgraph
 import qualified Data.HashMap.Monoidal as HM
 import qualified Data.HashMap.Strict   as HMS
+import qualified Data.Map.Strict       as Map
 import Data.Hashable
 import Data.List
 import Data.List.Extra
@@ -213,8 +214,8 @@ debug q = do
         SigD n ty
           | not (hasRankNTypes ty)
           , Just n' <- lookup n names -> do
-            dec1 <- adjustSig n ty
-            dec2 <- adjustSig n' ty
+            let dec1 = SigD n $ adjustTy ty
+            dec2    <- SigD n' <$> renameForallTyVars (adjustTy ty)
             return [dec1, dec2]
         _ -> return [dec]
 
@@ -229,11 +230,32 @@ prettyPrint = pprint . transformBi f
     where f (Name x _) = Name x NameS -- avoid nasty qualifications
 
 -- Add a wildcard for Observable a
-adjustSig name (ForallT vars ctxt typ) =
-  return $
-    SigD name $
+-- Tyvar renaming is a work around for http://ghc.haskell.org/trac/ghc/ticket/14643
+adjustTy (ForallT vars ctxt typ) =
     ForallT vars (delete WildCardT ctxt ++ [WildCardT]) typ
-adjustSig name other = adjustSig name $ ForallT [] [] other
+adjustTy other = adjustTy $ ForallT [] [] other
+
+renameForallTyVars (ForallT vars ctxt typ) = do
+  let allVarNames = case vars of
+                      []-> snub $ universeBi ctxt ++ universeBi typ
+                      _ -> map getVarNameFromTyBndr vars
+  vv <- Map.fromList <$> mapM (\v -> (v,) <$> newName (pprint v)) allVarNames
+  let Just renamedCtxt = transformBiM (applyRenaming vv) ctxt
+      Just renamedTyp  = transformBiM (applyRenaming vv) typ
+      Just renamedVars = mapM (applyRenamingToTyBndr vv) vars
+  return $
+    ForallT renamedVars renamedCtxt renamedTyp
+
+renameForallTyVars other = return other
+
+applyRenaming nn (VarT n) = VarT <$> Map.lookup n nn
+applyRenaming _ other = return other
+
+getVarNameFromTyBndr (PlainTV n) = n
+getVarNameFromTyBndr (KindedTV n _) = n
+
+applyRenamingToTyBndr vv (PlainTV n) = plainTV <$> Map.lookup n vv
+applyRenamingToTyBndr vv (KindedTV n k) = (`KindedTV` k) <$> Map.lookup n vv
 
 hasRankNTypes (ForallT vars ctxt typ) = hasRankNTypes' typ
 hasRankNTypes typ = hasRankNTypes' typ

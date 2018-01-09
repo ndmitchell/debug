@@ -17,6 +17,7 @@ dependencies:
 library:
     source-dirs:      src
     dependencies: 
+      - containers
       - debug
       - Hoed >= 0.4.1
       - extra
