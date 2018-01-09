@@ -57,7 +57,7 @@ instrument contents = unlines [top', modules', body']
 
 parseModule contents = (top, modules, body)
   where
-    isImportLine = ("import" `isPrefixOf`)
+    isImportLine = ("import " `isPrefixOf`)
     (top, rest) = break isImportLine (lines contents)
     (reverse -> body0, reverse -> modules0) =
       break (isImportLine . fst) (reverse $ annotateBlockComments rest)
