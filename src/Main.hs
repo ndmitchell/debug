@@ -107,14 +107,17 @@ instrumentMainFunction l
   , ('=':rest') <- dropWhile isSpace rest
   , not ("debugRun" `isPrefixOf` rest') = "main = Debug.debugRun $ " ++ rest'
   | otherwise = l
+
+parseModule contents = (map fst top, name, modules, body)
   where
+    contents' = annotateBlockComments (lines contents)
     isImportLine = ("import " `isPrefixOf`)
-    (top, rest) = break isImportLine (lines contents)
-    (reverse -> body0, reverse -> modules0) =
-      break (isImportLine . fst) (reverse $ annotateBlockComments rest)
+    (top, rest) = break (\(l, insideComment) -> not insideComment && isImportLine l) contents'
+    (reverse -> body0, reverse -> modules0) = break (\(l,insideComment) -> not insideComment && isImportLine l) (reverse rest)
     nameLine =
-      head
-        [l | (l, False) <- annotateBlockComments top, "module " `isPrefixOf` l]
+      head $
+      [l | (l, False) <- top, "module " `isPrefixOf` l] ++
+      ["Main"]
     name = takeWhile (\x -> not (isSpace x || x == '(')) $ drop 7 nameLine
     body = map fst $ dropWhile snd body0
     modules = map fst modules0 ++ map fst (takeWhile snd body0)
@@ -122,11 +125,26 @@ instrumentMainFunction l
 indent it@('#':_) = it
 indent other = "  " ++ other
 
+-- Annotate every line with True if its inside the span of a block comment.
+-- @
+--   {- LANGUAGE foo -}     -- False
+--   This is not inside {-  -- False
+--   but this is -}         -- True
 annotateBlockComments :: [String] -> [(String, Bool)]
 annotateBlockComments = annotateBlockComments' False
 annotateBlockComments' _ [] = []
-annotateBlockComments' False (l:rest)
-    | "{-" `isInfixOf` l = (l,True) : annotateBlockComments' True rest
-    | otherwise = (l,False) : annotateBlockComments' False rest
-annotateBlockComments' True (l:rest) =
-  (l,True) : annotateBlockComments' (not $ "-}" `isInfixOf` l) rest
+annotateBlockComments' False (l:rest) = (l,False) : annotateBlockComments' (startsBlockComment l) rest
+annotateBlockComments' True  (l:rest) = (l,True) : annotateBlockComments' (not $ endsBlockComment l) rest
+
+startsBlockComment line
+    | Just l' <- dropUntilIncluding "{-" line = not $ endsBlockComment l'
+    | otherwise = False
+
+endsBlockComment line
+    | Just l' <- dropUntilIncluding "-}" line = not $ startsBlockComment l'
+    | otherwise = False
+
+dropUntilIncluding needle haystack
+  | [] <- haystack = Nothing
+  | Just x <- stripPrefix needle haystack = Just x
+  | x:rest <- haystack = (x:) <$> dropUntilIncluding needle rest
