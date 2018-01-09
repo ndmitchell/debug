@@ -45,6 +45,8 @@ The call to `debugView` starts a web browser to view the recorded information, l
 
 ![Debug view output](debug.png)
 
+For the latest output from the continuous integration see [here](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/trace.html).
+
 ## Notes
 
 Calling the debugged function inside GHCi records the results for viewing inside the UI.
