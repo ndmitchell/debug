@@ -30,9 +30,10 @@ usage progName = unlines [
 
 data Config = Config
   { excluded :: [String]
+  , instrumentMain :: Bool
   } deriving (FromJSON, ToJSON, Generic, Show)
 
-defaultConfig = Config []
+defaultConfig = Config [] True
 
 readConfig :: IO Config
 readConfig = do
@@ -53,8 +54,11 @@ defConfig = unlines
   ["# debug-pp configuration file"
   ,"# ==========================="
   ,""
-  ,"# List of Haskell module names to exclude from instrumentation:"
+  ,"# List of Haskell module names to exclude from instrumentation"
   ,"excluded: []"
+  , ""
+  , "# If true then insert a call to debugRun in the main function."
+  , "instrumentMain: true"
   ]
 
 main :: IO ()
@@ -84,7 +88,7 @@ main = do
 
 instrument Config{..} contents
   | name `elem` excluded = contents
-  | otherwise = unlines [top', modules', body']
+  | otherwise = unlines [top', modules', body'']
   where
     (top,name,modules,body) = parseModule contents
     modules' = unlines $ modules ++ ["import qualified Debug"]
@@ -95,9 +99,14 @@ instrument Config{..} contents
         : "{-# LANGUAGE ViewPatterns #-}"
         : "{-# OPTIONS -Wno-partial-type-signatures #-}"
         : top
-    body' = unlines $ "Debug.debug [d|" : map indent (body ++ ["  |]"])
+    body'  = map (if instrumentMain then instrumentMainFunction else id) body
+    body'' = unlines $ "Debug.debug [d|" : map indent (body' ++ ["  |]"])
 
-parseModule contents = (top, name, modules, body)
+instrumentMainFunction l
+  | ('m':'a':'i':'n':rest) <- l
+  , ('=':rest') <- dropWhile isSpace rest
+  , not ("debugRun" `isPrefixOf` rest') = "main = Debug.debugRun $ " ++ rest'
+  | otherwise = l
   where
     isImportLine = ("import " `isPrefixOf`)
     (top, rest) = break isImportLine (lines contents)
