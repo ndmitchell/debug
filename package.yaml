@@ -14,6 +14,9 @@ extra-source-files:
 
 dependencies:
   - base >= 4.7 && < 5
+  - directory
+  - filepath
+  - yaml
   
 github: pepeiborra/debug-pp
 

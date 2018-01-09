@@ -40,6 +40,27 @@ Library
   ...
   build-tool-depends: debug-pp:debug-pp
 ```
+Configuration
+-------------
+
+The tool is customizable to some extent. It tries to find a config file in the
+following order:
+
+2. `.debug-pp.yaml` in the current directory (useful for per-directory
+   settings)
+3. `.debug-pp.yaml` in the nearest ancestor directory (useful for
+   per-project settings)
+4. `debug-pp/config.yaml` in the platform’s configuration directory
+   (on Windows, it is %APPDATA%, elsewhere it defaults to `~/.config` and
+   can be overridden by the `XDG_CONFIG_HOME` environment variable;
+   useful for user-wide settings)
+5. `.debug-pp.yaml` in your home directory (useful for user-wide
+   settings)
+6. The default settings.
+
+Use `debug-pp --defaults > .debug-pp.yaml` to dump a
+well-documented default configuration to a file, this way you can get started
+quickly.
 
 Motivation
 -------------

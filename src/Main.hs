@@ -1,12 +1,19 @@
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE ViewPatterns #-}
-
 module Main (main) where
 
 import Control.Monad
 import Data.Char
 import Data.List
+import Data.Yaml
+import Data.Yaml.Config
+import GHC.Generics
+import System.Directory
 import System.Environment
 import System.Exit
+import System.FilePath
 import System.IO
 import Text.Printf
 
@@ -21,11 +28,43 @@ usage progName = unlines [
   "If no SOURCE or if SOURCE is `-', read standard input."
   ]
 
+data Config = Config
+  { excluded :: [String]
+  } deriving (FromJSON, ToJSON, Generic, Show)
+
+defaultConfig = Config []
+
+readConfig :: IO Config
+readConfig = do
+  cwd <- getCurrentDirectory
+  home <- getHomeDirectory
+  system <- getXdgDirectory XdgConfig "debug-pp"
+  from <- filterM doesFileExist $
+        [d </> ".debug-pp.yaml" | d <- reverse (ancestors cwd)] ++
+        [ system </> "config.yaml"
+        , home </> ".debug-pp.yaml"]
+  case from of
+    [] -> return defaultConfig
+    _  -> loadYamlSettings from [] ignoreEnv
+  where
+    ancestors = map joinPath . tail . inits . splitPath
+
+defConfig = unlines
+  ["# debug-pp configuration file"
+  ,"# ==========================="
+  ,""
+  ,"# List of Haskell module names to exclude from instrumentation:"
+  ,"excluded: []"
+  ]
+
 main :: IO ()
 main = do
   args <- getArgs
   progName <- getProgName
   (orig, inp, out) <- case args of
+    ["--defaults"] -> do
+      putStrLn defConfig
+      exitSuccess
     ["--help"] -> do
       putStrLn $ usage progName
       exitSuccess
@@ -39,12 +78,15 @@ main = do
   hIn  <- maybe (return stdin)  (`openFile` ReadMode) inp
   hOut <- maybe (return stdout) (`openFile` WriteMode) out
   contents <- hGetContents hIn
-  hPutStr hOut $ instrument contents
+  config <- readConfig
+  hPutStr hOut $ instrument config contents
   unless (hOut == stdout) $ hClose hOut
 
-instrument contents = unlines [top', modules', body']
+instrument Config{..} contents
+  | name `elem` excluded = contents
+  | otherwise = unlines [top', modules', body']
   where
-    (top,modules,body) = parseModule contents
+    (top,name,modules,body) = parseModule contents
     modules' = unlines $ modules ++ ["import qualified Debug"]
     top' =
       unlines
@@ -55,12 +97,16 @@ instrument contents = unlines [top', modules', body']
         : top
     body' = unlines $ "Debug.debug [d|" : map indent (body ++ ["  |]"])
 
-parseModule contents = (top, modules, body)
+parseModule contents = (top, name, modules, body)
   where
     isImportLine = ("import " `isPrefixOf`)
     (top, rest) = break isImportLine (lines contents)
     (reverse -> body0, reverse -> modules0) =
       break (isImportLine . fst) (reverse $ annotateBlockComments rest)
+    nameLine =
+      head
+        [l | (l, False) <- annotateBlockComments top, "module " `isPrefixOf` l]
+    name = takeWhile (\x -> not (isSpace x || x == '(')) $ drop 7 nameLine
     body = map fst $ dropWhile snd body0
     modules = map fst modules0 ++ map fst (takeWhile snd body0)
 
