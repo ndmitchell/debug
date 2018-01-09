@@ -1,3 +1,4 @@
+-- | Module containing functions required by test code. Not part of the public interface. 
 module Debug.Util(
     -- * Exported for tests only
     removeLet,
