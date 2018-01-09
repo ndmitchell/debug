@@ -34,13 +34,13 @@ debug [d|
 --    type2 _ = undefined
     |]
 
-debug [d|    
+debug [d|
     g :: (Integral a) => a -> a -> Double   -- g 6 15 = 2700.0
-    g x y = 
-        let least = lcm x y 
-        in fromIntegral least ^^ gcd x y  
+    g x y =
+        let least = lcm x y
+        in fromIntegral least ^^ gcd x y
     |]
---  expected: 
+--  expected:
 --      x, $arg1 = 6
 --      y, $arg2 = 15
 --      least = 30
@@ -58,27 +58,27 @@ main = do
     _ <- return ()
     debugClear
     print $ quicksort (<) "haskell"
-    print $ g 6 15
     -- see https://github.com/feuerbach/ansi-terminal/issues/47 as this test fails on Appveyor
     try_ debugPrint
     writeFile "trace.js" . ("var trace =\n" ++) . (++ ";") =<< debugJSON
     debugSave "trace.html"
     evaluate type1
 --    evaluate type2
+    print $ g 6 15
     print $ quicksort' "haskell"
 
     --the following tests can be an hspec tests...
     putStrLn $ removeExtraDigits "_quicksort_0"
-    
-    putStrLn $ "let0: " ++ removeLet let0   -- f 
+
+    putStrLn $ "let0: " ++ removeLet let0   -- f
     putStrLn $ "let1: " ++ removeLet let1   -- select_2'
     putStrLn $ "let2: " ++ removeLet let2   -- Data.Foldable.foldr'
     putStrLn $ "let3: " ++ removeLet let3   -- Data.Foldable.foldr''
- 
+
 let0, let1, let2 :: String
 let0 = "f"
 let1 = "let (Debug.Record.var tag_0 \"_select_0\" -> _select_0_1) = select_2 p_3"
-let2 = "let (Debug.Record.var tag_0 \"_foldr\" -> _foldr_1) = Data.Foldable.foldr \ 
+let2 = "let (Debug.Record.var tag_0 \"_foldr\" -> _foldr_1) = Data.Foldable.foldr \
         \(let (Debug.Record.var tag_0 \"_select_0\" -> _select_0_2) = select_3 p_4 \
         \in _select_0_2)"
 let3 = "let (Debug.Record.var tag_0 \"_foldr'\" -> _foldr'_1) = (let (Debug.Record.var \tag_0 \
