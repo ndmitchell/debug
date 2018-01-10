@@ -31,9 +31,10 @@ usage progName = unlines [
 data Config = Config
   { excluded :: [String]
   , instrumentMain :: Bool
+  , verbose :: Bool
   } deriving (FromJSON, ToJSON, Generic, Show)
 
-defaultConfig = Config [] True
+defaultConfig = Config [] True False
 
 readConfig :: IO Config
 readConfig = do
@@ -59,6 +60,9 @@ defConfig = unlines
   , ""
   , "# If true then insert a call to debugRun in the main function."
   , "instrumentMain: true"
+  , ""
+  , "# If true, print a line for every instrumented module."
+  , "verbose: false"
   ]
 
 main :: IO ()
@@ -82,9 +86,11 @@ main = do
   hIn  <- maybe (return stdin)  (`openFile` ReadMode) inp
   hOut <- maybe (return stdout) (`openFile` WriteMode) out
   contents <- hGetContents hIn
-  config <- readConfig
+  config@Config{..} <- readConfig
   hPutStr hOut $ instrument config contents
   unless (hOut == stdout) $ hClose hOut
+  when verbose $
+    putStrLn $ "[debug-pp] Instrumented " ++ orig
 
 instrument Config{..} contents
   | name `elem` excluded = contents
