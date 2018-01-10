@@ -213,19 +213,20 @@ debug q = do
                 label = (nb ++ "\n" ++ prettyPrint dec)
             newDecl <-
               funD n [clause [] (normalB [|observe label $(varE n')|]) []]
-            let clauses' = transformBi adjustValD clauses
+            let clauses' = transformBi (adjustInnerSigD . adjustValD) clauses
             return [newDecl, FunD n' clauses']
-        SigD n ty
-          | not (hasRankNTypes ty)
-          , Just n' <- lookup n names -> do
-            let dec1 = SigD n $ adjustTy ty
-            dec2    <- SigD n' <$> renameForallTyVars (adjustTy ty)
-            return [dec1, dec2]
+        SigD n ty | Just n' <- lookup n names, not (hasRankNTypes ty) -> do
+          let ty' = adjustTy ty
+          ty'' <- renameForallTyVars ty'
+          return [SigD n ty', SigD n' ty'']
         _ -> return [dec]
 
 mkDebugName n@(c:_)
   | isAlpha c || c == '_' = n ++ "_debug"
   | otherwise = n ++ "??"
+
+adjustInnerSigD (SigD n ty) = SigD n (adjustTy ty)
+adjustInnerSigD other = other
 
 ----------------------------------------------------------
 -- With a little help from Neil Mitchell's debug package
