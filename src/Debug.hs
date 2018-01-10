@@ -77,10 +77,15 @@ debug q = do
 
 adjustDec :: (Name -> Maybe Dec) -> Dec -> Q Dec
 -- try and shove in a "_ =>" if we can, to capture necessary Show instances
-adjustDec askSig x@(SigD name (ForallT vars ctxt typ)) = return $
+adjustDec askSig x@(SigD name ty@(ForallT vars ctxt typ))
+  | hasRankNTypes ty = return x
+  | otherwise = return $
     SigD name $ ForallT vars (delete WildCardT ctxt ++ [WildCardT]) typ
 adjustDec askSig (SigD name typ) = adjustDec askSig $ SigD name $ ForallT [] [] typ
-adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_)) = do
+adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_))
+  | Just (SigD _ ty) <- askSig name
+  , hasRankNTypes ty = return o
+  | otherwise = do
     inner <- newName "inner"
     tag <- newName "tag"
     args <- sequence [newName $ "arg" ++ show i | i <- [1 .. length arity]]
@@ -170,9 +175,14 @@ prettyPrint = pprint . transformBi f
 
 adjustValD tag decl@ValD{} = transformBi (adjustPat tag) decl
 adjustValD tag other       = other
+
 adjustPat :: Name -> Pat -> Pat
 adjustPat tag (VarP x) = ViewP (VarE 'var `AppE` VarE tag `AppE` toLit x) (VarP x)
 adjustPat tag x = x
 
 toLit = toLitPre ""
 toLitPre pre (Name (OccName x) _) = LitE $ StringL $ pre ++ x
+
+hasRankNTypes (ForallT vars ctxt typ) = hasRankNTypes' typ
+hasRankNTypes typ = hasRankNTypes' typ
+hasRankNTypes' typ = not $ null [ () | ForallT{} <- universe typ]
