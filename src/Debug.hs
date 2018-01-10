@@ -224,7 +224,7 @@ debug q = do
         _ -> return [dec]
 
 mkDebugName n@(c:_)
-  | isAlpha c = n ++ "Debug"
+  | isAlpha c || c == '_' = n ++ "_debug"
   | otherwise = n ++ "??"
 
 ----------------------------------------------------------
