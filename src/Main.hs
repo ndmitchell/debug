@@ -104,6 +104,7 @@ instrument Config{..} contents
         : "{-# LANGUAGE PartialTypeSignatures #-}"
         : "{-# LANGUAGE ViewPatterns #-}"
         : "{-# LANGUAGE FlexibleContexts #-}"
+        : "{-# LANGUAGE ExtendedDefaultRules #-}"
         : "{-# OPTIONS -Wno-partial-type-signatures #-}"
         : top
     body'  = map (if instrumentMain then instrumentMainFunction else id) body
