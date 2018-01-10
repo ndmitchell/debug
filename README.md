@@ -69,4 +69,4 @@ Motivation
 
 * However, error messages are much worse for TH quoted code. Errors like `Not in scope: data constructor Foo in line X` become `Not in scope: Foo, in the TH quotation ENTIRE MODULE HERE`. 
 
-* Personally, quoting/unquoting the module by hand is annoying. Having a preprocessor do this for me is convenient, and can be easily tied to a Cabal flag ora stack command line arg.
+* Personally, quoting/unquoting the module by hand is annoying. Having a preprocessor do this for me is convenient, and can be easily tied to a Cabal flag or a stack command line arg.
