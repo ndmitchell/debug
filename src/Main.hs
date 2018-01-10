@@ -103,6 +103,7 @@ instrument Config{..} contents
         $ "{-# LANGUAGE TemplateHaskell #-}"
         : "{-# LANGUAGE PartialTypeSignatures #-}"
         : "{-# LANGUAGE ViewPatterns #-}"
+        : "{-# LANGUAGE FlexibleContexts #-}"
         : "{-# OPTIONS -Wno-partial-type-signatures #-}"
         : top
     body'  = map (if instrumentMain then instrumentMainFunction else id) body
