@@ -59,8 +59,8 @@ debug [d|
 --      lcm = 3
 --      (^^), $result = 2700
 
-quicksort_manual :: (Ord a, Show a) => [a] -> [a]
-quicksort_manual = quicksort'
+explicit :: (Ord a, Show a) => [a] -> [a]
+explicit = quicksort'
     where
         quicksort' arg1 = fun "quicksort" $ \t -> quicksort'' t (var t "arg1" arg1)
         quicksort'' t [] = []
@@ -85,7 +85,7 @@ main = do
     example "quicksort" $ quicksort "haskell"
     example "quicksortBy" $ quicksortBy (<) "haskell"
     example "lcm_gcd" $ lcm_gcd 6 15
-    example "quicksort_manual" $ quicksort_manual "haskell"
+    example "explicit" $ explicit "haskell"
     copyFile "output/quicksort.js" "trace.js" -- useful for debugging the HTML
 
     evaluate type1
