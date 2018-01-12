@@ -9,17 +9,28 @@ module Main(main) where
 import Debug
 import Debug.Record
 import Debug.Util
+import Data.List
 import Control.Exception.Extra
+import System.Directory
+import System.FilePath
+
 
 debug [d|
-    quicksort :: (a -> a -> Bool) -> [a] -> [a]
-    quicksort op [] = []
-    quicksort op (x:xs) = quicksort op lt ++ [x] ++ quicksort op gt
-        where (lt, gt) = partition (op x) xs
+   quicksort :: Ord a => [a] -> [a]
+   quicksort [] = []
+   quicksort (x:xs) = quicksort lt ++ [x] ++ quicksort gt
+       where (lt, gt) = partition (<= x) xs
+   |]
 
-    partition  :: (a -> Bool) -> [a] -> ([a],[a])
-    {-# INLINE partition #-}
-    partition p xs = foldr (select p) ([],[]) xs
+debug [d|
+    quicksortBy :: (a -> a -> Bool) -> [a] -> [a]
+    quicksortBy op [] = []
+    quicksortBy op (x:xs) = quicksortBy op lt ++ [x] ++ quicksortBy op gt
+        where (lt, gt) = partitionBy (op x) xs
+
+    partitionBy  :: (a -> Bool) -> [a] -> ([a],[a])
+    {-# INLINE partitionBy #-}
+    partitionBy p xs = foldr (select p) ([],[]) xs
 
     select :: (a -> Bool) -> a -> ([a], [a]) -> ([a], [a])
     select p x ~(ts,fs) | p x       = (x:ts,fs)
@@ -35,8 +46,8 @@ debug [d|
     |]
 
 debug [d|
-    g :: (Integral a) => a -> a -> Double   -- g 6 15 = 2700.0
-    g x y =
+    lcm_gcd :: (Integral a) => a -> a -> Double
+    lcm_gcd x y =
         let least = lcm x y
         in fromIntegral least ^^ gcd x y
     |]
@@ -48,32 +59,45 @@ debug [d|
 --      lcm = 3
 --      (^^), $result = 2700
 
-quicksort' :: (Ord a, Show a) => [a] -> [a]
-quicksort' arg1 = fun "quicksort" $ \t -> quicksort'' t (var t "arg1" arg1)
-quicksort'' t [] = []
-quicksort'' t ((var t "x" -> x):(var t "xs" -> xs)) = quicksort' lt ++ [x] ++ quicksort' gt
-    where (var t "lt" -> lt, var t "gt" -> gt) = partition (<= x) xs
+quicksort_manual :: (Ord a, Show a) => [a] -> [a]
+quicksort_manual = quicksort'
+    where
+        quicksort' arg1 = fun "quicksort" $ \t -> quicksort'' t (var t "arg1" arg1)
+        quicksort'' t [] = []
+        quicksort'' t ((var t "x" -> x):(var t "xs" -> xs)) = quicksort' lt ++ [x] ++ quicksort' gt
+            where (var t "lt" -> lt, var t "gt" -> gt) = partition (<= x) xs
+
+
+example name expr = do
+    _ <- return ()
+    putStrLn $ "Testing " ++ name
+    debugClear
+    print expr
+    writeFile ("output" </> name <.> "js") . ("var trace =\n" ++) . (++ ";") =<< debugJSON
+    debugSave $ "output" </> name <.> "html"
+    -- see https://github.com/feuerbach/ansi-terminal/issues/47 as this test fails on Appveyor
+    -- can remove once ansi-terminal-0.8 is available in Stackage LTS (which will be v11)
+    try_ debugPrint
+    putStrLn "\n\n"
 
 main = do
-    _ <- return ()
-    debugClear
-    print $ quicksort (<) "haskell"
-    -- see https://github.com/feuerbach/ansi-terminal/issues/47 as this test fails on Appveyor
-    try_ debugPrint
-    writeFile "trace.js" . ("var trace =\n" ++) . (++ ";") =<< debugJSON
-    debugSave "trace.html"
+    createDirectoryIfMissing True "output"
+    example "quicksort" $ quicksort "haskell"
+    example "quicksortBy" $ quicksortBy (<) "haskell"
+    example "lcm_gcd" $ lcm_gcd 6 15
+    example "quicksort_manual" $ quicksort_manual "haskell"
+    copyFile "output/quicksort.js" "trace.js" -- useful for debugging the HTML
+
     evaluate type1
 --    evaluate type2
-    print $ g 6 15
-    print $ quicksort' "haskell"
 
-    --the following tests can be an hspec tests...
-    putStrLn $ removeExtraDigits "_quicksort_0"
-
-    putStrLn $ "let0: " ++ removeLet let0   -- f
-    putStrLn $ "let1: " ++ removeLet let1   -- select_2'
-    putStrLn $ "let2: " ++ removeLet let2   -- Data.Foldable.foldr'
-    putStrLn $ "let3: " ++ removeLet let3   -- Data.Foldable.foldr''
+    let a === b = if a == b then putStr "." else fail $ show (a, "/=", b)
+    removeExtraDigits "_quicksort_0" === "_quicksort"
+    removeLet let0 === "f"
+    removeLet let1 === "select_2'"
+    removeLet let2 === "Data.Foldable.foldr'"
+    removeLet let3 === "Data.Foldable.foldr''"
+    putStrLn " done"
 
 let0, let1, let2 :: String
 let0 = "f"

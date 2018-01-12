@@ -65,5 +65,7 @@ test-suite debug-test
 
     build-depends:
         base == 4.*,
+        directory,
         extra,
+        filepath,
         debug

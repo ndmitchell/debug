@@ -12,7 +12,7 @@ quicksort (x:xs) = quicksort lt ++ [x] ++ quicksort gt
     where (lt, gt) = partition (<= x) xs
 ```
 
-Turn on the `TemplateHaskell` and `ViewPatterns` extensions, import `Debug`, indent your code and place it under a call to `debug`, e.g.:
+Turn on the `TemplateHaskell`, `ViewPatterns` and `PartialTypeSignatures` extensions, import `Debug`, indent your code and place it under a call to `debug`, e.g.:
 
 ```haskell
 {-# LANGUAGE TemplateHaskell, ViewPatterns, PartialTypeSignatures #-}
@@ -45,7 +45,11 @@ The call to `debugView` starts a web browser to view the recorded information, l
 
 ![Debug view output](debug.png)
 
-For the latest output from the continuous integration see [here](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/trace.html).
+You can look play with the example results for various examples:
+
+* [`quicksort "haskell"`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/quicksort.html) as above.
+* [`quicksortBy (<) "haskell"`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/quicksortBy.html), like `quicksort` but using a comparison function and including a trace of `partition` itself.
+* [`lcm_gcd 6 15`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/lcm_gcd.html), computing `lcm 6 15 ^^ gcd 6 15`.
 
 ## Notes
 
