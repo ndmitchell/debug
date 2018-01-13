@@ -97,6 +97,11 @@ main = do
     removeLet let1 === "select_2'"
     removeLet let2 === "Data.Foldable.foldr'"
     removeLet let3 === "Data.Foldable.foldr''"
+    mkLegalInfixVar "+" === "plus"
+    mkLegalInfixVar "<!>" === "lt_bang_gt"
+    mkLegalInfixVar "`lcd`" === "lcd"
+    mkLegalInfixVar "abc" === "abc"
+
     putStrLn " done"
 
 let0, let1, let2 :: String
