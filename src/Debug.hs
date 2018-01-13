@@ -108,7 +108,7 @@ appsFromClause tag cl@(Clause pats body decs) = do
 
 appsFromBody :: Name -> Body -> Q Body
 appsFromBody _ b@(GuardedB _) = return b -- TODO: implement guards
-appsFromBody tag (NormalB e) = NormalB <$> sppsFromExp tag e 
+appsFromBody tag (NormalB e) = NormalB <$> appsFromExp tag e 
 
 appsFromExp :: Name -> Exp -> Q Exp
 appsFromExp tag e@(AppE e1 e2) = do
