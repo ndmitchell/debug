@@ -108,19 +108,16 @@ appsFromClause tag cl@(Clause pats body decs) = do
 
 appsFromBody :: Name -> Body -> Q Body
 appsFromBody _ b@(GuardedB _) = return b -- TODO: implement guards
-appsFromBody tag (NormalB e) = do 
-    newExp <- appsFromExp tag e
-    return (NormalB newExp)
+appsFromBody tag (NormalB e) = NormalB <$> sppsFromExp tag e 
 
 appsFromExp :: Name -> Exp -> Q Exp
 appsFromExp tag e@(AppE e1 e2) = do
     newE1 <- appsFromExp tag e1
     newE2 <- appsFromExp tag e2
     adjustApp tag (AppE newE1 newE2)
-appsFromExp tag e@(LetE decs exp) = do
-    newDecs <- traverse (appsFromDec tag) decs   
-    newExp <- appsFromExp tag exp
-    return $ LetE newDecs newExp
+appsFromExp tag e@(LetE decs exp) = 
+    do newDecs <- traverse (appsFromDec tag) decs
+       LetE newDecs <$> appsFromExp tag exp
 appsFromExp tag e@(InfixE e1May e2 e3May) = do
     newE1 <- appsFromExpMay tag e1May
     newE2 <- appsFromExp tag e2
@@ -137,7 +134,7 @@ appsFromDec tag d@(ValD pat body dec) = do
     newBody <- appsFromBody tag body
     return $ ValD pat newBody dec
 appsFromDec tag d@(FunD name subClauses) = return d
-appsFromDec _ d = return d
+appsFromDec _ d = return d 
 
 adjustApp :: Name -> Exp -> Q Exp
 adjustApp tag (AppE e1 e2) = do 
