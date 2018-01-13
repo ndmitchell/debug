@@ -52,15 +52,17 @@ debugRun program = getDebugTrace defaultHoedOptions {prettyWidth = 160, verbose 
 
 -- | Runs the program collecting a debugging trace
 getDebugTrace :: HoedOptions -> IO () -> IO DebugTrace
-getDebugTrace hoedOptions program =
-  convert <$> runO' hoedOptions program
+getDebugTrace hoedOptions program = do
+  hoedAnalysis <- runO' hoedOptions program
+  let !compTree = hoedCompTree hoedAnalysis
+  return $ convert compTree
 
 type a :-> b = HM.MonoidalHashMap a b
 
 data HoedFunctionKey = HoedFunctionKey
-  { label :: String
-  , arity :: Int
-  , clauses :: [String]
+  { label :: !String
+  , arity :: !Int
+  , clauses :: !([String])
   }
   deriving (Eq, Generic, Hashable)
 
@@ -68,11 +70,36 @@ type HoedCallKey = Int
 
 data HoedCallDetails = HoedCallDetails
   { argValues
-  , clauseValues :: [String]
-  , result :: String
-  , depends, parents :: [HoedCallKey]
+  , clauseValues :: !([String])
+  , result :: !String
+  , depends, parents :: ![HoedCallKey]
   } deriving (Eq, Generic, Hashable)
 
+instance Hashable Vertex where
+  hashWithSalt s RootVertex = s `hashWithSalt` (-1 :: Int)
+  hashWithSalt s (Vertex cs _) = s `hashWithSalt` cs
+instance Hashable CompStmt where
+  hashWithSalt s cs = hashWithSalt s (stmtIdentifier cs)
+
+---------------------------------------------------------------------------
+-- Cached pred and succ relationships
+
+data AnnotatedCompTree = AnnotatedCompTree
+  { compTree :: CompTree
+  , predsMap, succsMap:: HMS.HashMap Vertex [Vertex]
+  }
+getPreds :: AnnotatedCompTree -> Vertex -> [Vertex]
+getPreds act v = fromMaybe [] $ HMS.lookup v (predsMap act)
+
+getSuccs :: AnnotatedCompTree -> Vertex -> [Vertex]
+getSuccs act v =  fromMaybe [] $ HMS.lookup v (succsMap act)
+
+annotateCompTree :: CompTree -> AnnotatedCompTree
+annotateCompTree compTree = AnnotatedCompTree{..}  where
+  predsMap  = HMS.fromListWith (++) [ (t, [s]) | Arc s t _ <- arcs compTree]
+  succsMap  = HMS.fromListWith (++) [ (s, [t]) | Arc s t _ <- arcs compTree]
+
+---------------------------------------------------------------------------
 hoedCallValues :: HoedCallDetails -> [String]
 hoedCallValues HoedCallDetails{..} = result : (argValues ++ clauseValues)
 
@@ -85,7 +112,7 @@ getRelatives rel v =
         , callKey <- getRelatives rel v'
       ]
 
-extractHoedCall :: CompTree -> Vertex -> Maybe (HoedFunctionKey, HoedCallKey, HoedCallDetails)
+extractHoedCall :: AnnotatedCompTree -> Vertex -> Maybe (HoedFunctionKey, HoedCallKey, HoedCallDetails)
 extractHoedCall hoedCompTree v@Vertex {vertexStmt = c@CompStmt {stmtDetails = StmtLam {..}, ..}} =
   Just
     ( HoedFunctionKey stmtLabel (length stmtLamArgs) (map fst clauses)
@@ -95,23 +122,23 @@ extractHoedCall hoedCompTree v@Vertex {vertexStmt = c@CompStmt {stmtDetails = St
     clauses =
       [ (stmtLabel, stmtCon)
       | Vertex {vertexStmt = CompStmt {stmtLabel, stmtDetails = StmtCon {..}}} <-
-          succs hoedCompTree v
+          getSuccs hoedCompTree v
       ]
-    depends = snub $ getRelatives (succs hoedCompTree) v
-    parents = snub $ getRelatives (preds hoedCompTree) v
+    depends = snub $ getRelatives (getSuccs hoedCompTree) v
+    parents = snub $ getRelatives (getPreds hoedCompTree) v
 
 extractHoedCall _ _ = Nothing
 
 -- | Convert a 'Hoed' trace to a 'debug' trace
-convert :: HoedAnalysis -> DebugTrace
-convert HoedAnalysis {..} = DebugTrace {..}
+convert :: CompTree -> DebugTrace
+convert hoedCompTree = DebugTrace {..}
   where
     hoedFunctionCalls :: HoedFunctionKey :-> [(HoedCallKey, HoedCallDetails)]
     hoedFunctionCalls =
       HM.fromList
         [ (fnKey, [(callKey, callDetails)])
         | Just (fnKey, callKey, callDetails) <-
-            map (extractHoedCall hoedCompTree) (vertices hoedCompTree)
+            map (extractHoedCall (annotateCompTree hoedCompTree)) (vertices hoedCompTree)
         ]
     sortedFunctionCalls =
       sortOn (\(x, _) -> (label x, arity x)) $ toList hoedFunctionCalls
