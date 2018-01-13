@@ -43,7 +43,8 @@ mkLegalInfixVar s =
 opNames :: M.Map Char String
 opNames = M.fromList opList where 
     opList = [ ('+', "plus"), ('-', "minus"), ('*', "star"), ('/', "div")
-             , ('^', "caret")
-             , ('<', "lt"), ('>', "gt"), ('!', "bang")
+             , ('^', "caret"), ('~', "tilde"), ('%', "percent"), ('&', "amp")
+             , ('=', "equals"), ('<', "lt"), ('>', "gt"), ('?', "quest")
+             , ('.', "dot"), ('@', "at"), ('#', "hash"), ('!', "bang"), ('|', "bar")
              , ('`', "") -- remove backtics to form variable name
              ]
