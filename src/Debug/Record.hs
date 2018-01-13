@@ -241,20 +241,19 @@ data DebugTrace = DebugTrace
 -- | Returns all the information about the observed function accumulated so far.
 getDebugTrace :: IO DebugTrace
 getDebugTrace = do
-  vars <- readIORef refVariables
-  vars <- return $ map varShow $ listVariables vars
-  calls <- readIORef refCalls
-  let infos = nubOrd [x | Call x _ <- calls]
-      infoId = HM.fromList $ zip infos [0::Int ..]
-  callEntries <-
-    forM (reverse calls) $ \(Call info vars) -> do
-      vars <- readIORef vars
-      let callFunctionId   = infoId HM.! info
-          callVals = map (second varId) vars
-          callDepends = [] -- available in the Hoed backend but not in this one
-          callParents = [] -- available in the Hoed backend but not in this one
-      return CallData{..}
-  return $ DebugTrace infos vars callEntries
+    vars <- readIORef refVariables
+    vars <- return $ map varShow $ listVariables vars
+    calls <- readIORef refCalls
+    let infos = nubOrd [x | Call x _ <- calls]
+        infoId = HM.fromList $ zip infos [0 :: Int ..]
+    DebugTrace infos vars <$>
+        forM (reverse calls) $ \(Call info vars) -> do 
+            vars <- readIORef vars
+            let callFunctionId = infoId HM.! info
+                callVals = map (second varId) vars
+                callDepends = [] -- available in the Hoed backend but not in this one
+                callParents = [] -- available in the Hoed backend but not in this one
+            return CallData{..}
 
 instance FromJSON DebugTrace
 instance ToJSON DebugTrace

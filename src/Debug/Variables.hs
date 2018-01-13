@@ -50,5 +50,4 @@ addVariable a vs@(Variables n xs) =
 ptrEqual :: Any -> Any -> Bool
 ptrEqual a b = unsafePerformIO $ do
     a <- evaluate a
-    b <- evaluate b
-    return $ isTrue# (reallyUnsafePtrEquality# a b)
+    isTrue# . reallyUnsafePtrEquality# a <$> evaluate b
