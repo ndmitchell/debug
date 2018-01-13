@@ -54,10 +54,37 @@ debug [d|
 --  expected:
 --      x, $arg1 = 6
 --      y, $arg2 = 15
---      least = 30
+--      $result = 27000.0
+--      ^^ = 27000.0
 --      fromIntegral = 30.0
---      lcm = 3
---      (^^), $result = 2700
+--      gcd = <function>
+--      gcd' = 3
+--      lcm = <function>
+--      lcm' = 30
+--      least = 30
+
+debug [d|
+    lcm_gcd_log :: Int -> Int -> Float
+    lcm_gcd_log x y = 
+        let base = fromIntegral $ gcd x y
+            val = fromIntegral (x `lcm` y) - base
+        in logBase base val ** base
+    |]
+--  expected:
+--      $arg1, x = 6
+--      $arg2, y = 15
+--      $result = 27.0
+--      ** = 27.0
+--      - = 27.0
+--      base = 3.0
+--      fromIntegral = 30.0
+--      gcd = <function>
+--      gcd' = 3
+--      lcm = 30
+--      logBase = <function>
+--      logBase' = 3.0
+--      val = 27.0
+
 
 explicit :: (Ord a, Show a) => [a] -> [a]
 explicit = quicksort'
@@ -85,6 +112,7 @@ main = do
     example "quicksort" $ quicksort "haskell"
     example "quicksortBy" $ quicksortBy (<) "haskell"
     example "lcm_gcd" $ lcm_gcd 6 15
+    example "lcm_gcd_log" $ lcm_gcd_log 6 15
     example "explicit" $ explicit "haskell"
     copyFile "output/quicksort.js" "trace.js" -- useful for debugging the HTML
 
