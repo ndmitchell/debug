@@ -12,7 +12,7 @@ quicksort (x:xs) = quicksort lt ++ [x] ++ quicksort gt
     where (lt, gt) = partition (<= x) xs
 ```
 
-Turn on the `TemplateHaskell` and `ViewPatterns` extensions, import `Debug`, indent your code and place it under a call to `debug`, e.g.:
+Turn on the `TemplateHaskell`, `ViewPatterns` and `PartialTypeSignatures` extensions, import `Debug`, indent your code and place it under a call to `debug`, e.g.:
 
 ```haskell
 {-# LANGUAGE TemplateHaskell, ViewPatterns, PartialTypeSignatures #-}
@@ -45,6 +45,25 @@ The call to `debugView` starts a web browser to view the recorded information, l
 
 ![Debug view output](debug.png)
 
+You can look play with the example results for various examples:
+
+* [`quicksort "haskell"`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/quicksort.html) as above.
+* [`quicksortBy (<) "haskell"`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/quicksortBy.html), like `quicksort` but using a comparison function and including a trace of `partition` itself.
+* [`lcm_gcd 6 15`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/lcm_gcd.html), computing `lcm 6 15 ^^ gcd 6 15`.
+
+## Notes
+
+Calling the debugged function inside GHCi records the results for viewing inside the UI.
+The function can be called multiple times with different parameters, and the results of each
+individual run can be selected inside the UI.
+
+You can create multiple `debug [d|...]` blocks inside a module and you can also put more than one
+function inside a single block.
+
+A function being debugged can refer to another function also being debugged, but due to a limitation
+of Template Haskell, the definition of the function being called must occur above the point of its
+reference in the source module.
+
 ## Limitations
 
 This tool is quite new, so it has both limitations, places it is incomplete and bugs. Some notable issues:
@@ -68,3 +87,7 @@ Compared to the above, `debug` stresses simplicitly of integration and user expe
 ### Q: `debugView` fails talking about Wine?
 
 A: If you get `wine: invalid directory "/home/f/.wine" in WINEPREFIX: not an absolute path` when running `debugView` that means `xdg-open` is handled by [Wine](https://www.winehq.org/). Fix that and it will work once more.
+
+### Q: `debugView` fails with "error: Variable not in scope: debugView" ?
+
+A: Explicitly load the Debug module in GHCi via `:m + Debug`

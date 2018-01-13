@@ -1,4 +1,5 @@
 /dist/
 /stack.yaml
 trace.js
-trace.html
+/output/
+.stack-work/

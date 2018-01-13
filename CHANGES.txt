@@ -1,5 +1,6 @@
 Changelog for Debug
 
+    #16, display values for intermediate function calls
     #8, change the Show desugaring
     #9, make the JSON format external
 0.0.2, released 2017-12-18
