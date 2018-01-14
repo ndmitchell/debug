@@ -54,7 +54,7 @@ module Debug(
 
 import Control.Monad.Extra
 import Data.Generics.Uniplate.Data
-import Data.List.Extra   
+import Data.List.Extra
 import Data.Maybe
 import Debug.Record
 import Debug.Util
@@ -94,7 +94,7 @@ adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_)) = do
             LitE (StringL "$result")
     let body2 = VarE 'var `AppE` VarE tag `AppE` LitE (StringL "$result") `AppE` foldl AppE (VarE inner) (VarE tag : args2)
     let body = VarE 'funInfo `AppE` info `AppE` LamE [VarP tag] body2
-    afterApps <- transformApps tag clauses2 
+    afterApps <- transformApps tag clauses2
     return $ FunD name [Clause (map VarP args) (NormalB body) [FunD inner afterApps]]
 adjustDec askSig x = return x
 
@@ -108,9 +108,7 @@ appsFromClause tag cl@(Clause pats body decs) = do
 
 appsFromBody :: Name -> Body -> Q Body
 appsFromBody _ b@(GuardedB _) = return b -- TODO: implement guards
-appsFromBody tag (NormalB e) = do 
-    newExp <- appsFromExp tag e
-    return (NormalB newExp)
+appsFromBody tag (NormalB e) = NormalB <$> appsFromExp tag e
 
 appsFromExp :: Name -> Exp -> Q Exp
 appsFromExp tag e@(AppE e1 e2) = do
@@ -118,7 +116,7 @@ appsFromExp tag e@(AppE e1 e2) = do
     newE2 <- appsFromExp tag e2
     adjustApp tag (AppE newE1 newE2)
 appsFromExp tag e@(LetE decs exp) = do
-    newDecs <- traverse (appsFromDec tag) decs   
+    newDecs <- traverse (appsFromDec tag) decs
     newExp <- appsFromExp tag exp
     return $ LetE newDecs newExp
 appsFromExp tag e@(InfixE e1May e2 e3May) = do
@@ -127,11 +125,11 @@ appsFromExp tag e@(InfixE e1May e2 e3May) = do
     newE3 <- appsFromExpMay tag e3May
     adjustedE2 <- adjustApp tag (InfixE newE1 newE2 newE3)
     return $ InfixE newE1 adjustedE2 newE3
-appsFromExp tag e = return e  
+appsFromExp tag e = return e
 
 appsFromExpMay :: Name -> Maybe Exp -> Q (Maybe Exp)
 appsFromExpMay tag Nothing = return Nothing
-appsFromExpMay tag (Just e) = sequence $ Just $ appsFromExp tag e   
+appsFromExpMay tag (Just e) = sequence $ Just $ appsFromExp tag e
 
 appsFromDec :: Name -> Dec -> Q Dec
 appsFromDec tag d@(ValD pat body dec) = do
@@ -141,31 +139,31 @@ appsFromDec tag d@(FunD name subClauses) = return d
 appsFromDec _ d = return d
 
 adjustApp :: Name -> Exp -> Q Exp
-adjustApp tag (AppE e1 e2) = do 
+adjustApp tag (AppE e1 e2) = do
     let displayName = expDisplayName e1
-    e1n <- newName displayName 
+    e1n <- newName displayName
     let viewP = ViewP (VarE 'var `AppE` VarE tag `AppE` LitE (StringL displayName)) (VarP e1n)
     let result = LetE [ValD viewP (NormalB (AppE e1 e2)) []] (VarE e1n)
     return result
 adjustApp tag e@(InfixE e1May e2 e3May) = do
     let displayName = infixExpDisplayName e2
-    e2n <- newName displayName 
+    e2n <- newName displayName
     let viewP = ViewP (VarE 'var `AppE` VarE tag `AppE` LitE (StringL displayName)) (VarP e2n)
-    let _result = LetE [ValD viewP (NormalB (InfixE e1May e2 e3May)) []] (VarE e2n)  
+    let _result = LetE [ValD viewP (NormalB (InfixE e1May e2 e3May)) []] (VarE e2n)
     return e2 -- when fixed, ---> return _result
 adjustApp _ e = return e
 
 -- Find the (unqualified) function name to use as the UI display name
 expDisplayName :: Exp -> String
-expDisplayName e = 
+expDisplayName e =
     let name = removeLet $ (show . ppr) e
-    in '_' : removeExtraDigits (takeWhileEnd (/= '.') ((head . words) name))    
+    in '_' : removeExtraDigits (takeWhileEnd (/= '.') ((head . words) name))
 
--- Same as expDisplayName but for infix functions    
+-- Same as expDisplayName but for infix functions
 infixExpDisplayName :: Exp -> String
-infixExpDisplayName e = 
+infixExpDisplayName e =
     let name = removeLet $ (show . ppr) e
-    in "_(" ++ removeExtraDigits (takeWhileEnd (/= '.') ((head . words) name)) 
+    in "_(" ++ removeExtraDigits (takeWhileEnd (/= '.') ((head . words) name))
 
 prettyPrint = pprint . transformBi f
     where f (Name x _) = Name x NameS -- avoid nasty qualifications
