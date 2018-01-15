@@ -56,6 +56,7 @@ import Control.Monad.Extra
 import Data.Generics.Uniplate.Data
 import Data.List.Extra
 import Data.Maybe
+import Data.Text (pack)
 import Debug.Record
 import Debug.Util
 import Language.Haskell.TH
@@ -93,10 +94,10 @@ adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_))
     let clauses2 = map addTag $ transformBi (adjustValD tag) clauses
     let args2 = [VarE 'var `AppE` VarE tag `AppE` toLitPre "$" a `AppE` VarE a | a <- args]
     let info = ConE 'Function `AppE`
-            toLit name `AppE`
-            LitE (StringL $ prettyPrint $ maybeToList (askSig name) ++ [o]) `AppE`
-            ListE (map (toLitPre "$") args) `AppE`
-            LitE (StringL "$result")
+            (packLit $ toLit name) `AppE`
+            (packLit $ LitE (StringL $ prettyPrint $ maybeToList (askSig name) ++ [o])) `AppE`
+            ListE (map (packLit . toLitPre "$") args) `AppE`
+            packLit (LitE (StringL "$result"))
     let body2 = VarE 'var `AppE` VarE tag `AppE` LitE (StringL "$result") `AppE` foldl AppE (VarE inner) (VarE tag : args2)
     let body = VarE 'funInfo `AppE` info `AppE` LamE [VarP tag] body2
     afterApps <- transformApps tag clauses2
@@ -182,6 +183,7 @@ adjustPat tag x = x
 
 toLit = toLitPre ""
 toLitPre pre (Name (OccName x) _) = LitE $ StringL $ pre ++ x
+packLit = AppE (VarE 'pack)
 
 hasRankNTypes (ForallT vars ctxt typ) = hasRankNTypes' typ
 hasRankNTypes typ = hasRankNTypes' typ

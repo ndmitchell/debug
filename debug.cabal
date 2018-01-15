@@ -45,7 +45,8 @@ library
         uniplate,
         unordered-containers,
         js-jquery,
-        ansi-wl-pprint,
+        prettyprinter,
+        prettyprinter-compat-ansi-wl-pprint,
         vector
 
     exposed-modules:
