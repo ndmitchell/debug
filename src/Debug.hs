@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase      #-}
 {-# LANGUAGE NamedFieldPuns  #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections   #-}
@@ -39,6 +40,9 @@ import qualified Data.HashSet                as Set
 import           Data.List
 import           Data.List.Extra
 import           Data.Maybe
+import           Data.Monoid
+import           Data.Text                   (Text, pack, unpack)
+import qualified Data.Text                   as T
 import           Debug.Hoed                  hiding (runO)
 import           Debug.Hoed.CompTree
 import           Debug.Hoed.Render
@@ -67,31 +71,37 @@ debugRun program = getDebugTrace defaultHoedOptions {prettyWidth = 160, verbose 
 getDebugTrace :: HoedOptions -> IO () -> IO DebugTrace
 getDebugTrace hoedOptions program = do
   hoedAnalysis <- runO' hoedOptions program
-  putStrLn "Please wait while the debug trace is constructed"
+  putStrLn "Please wait while the debug trace is constructed..."
   let !compTree = hoedCompTree hoedAnalysis
   t <- getTime Monotonic
   let result = convert compTree
       !_     = length(variables result)
   t' <- getTime Monotonic
   let compTime = fromIntegral(toNanoSecs(diffTimeSpec t t')) * 1e-9
-  putStrLn $ "=== Debug Session (" ++ show compTime ++ " seconds) ==="
+  putStrLn $ "=== Debug Trace (" ++ show compTime ++ " seconds) ==="
   return result
 
 type a :-> b = HM.MonoidalHashMap a b
 
 data HoedFunctionKey = HoedFunctionKey
-  { label   :: !String
+  { label   :: !Text
   , arity   :: !Int
-  , clauses :: !([String])
+  , clauses :: !([Text])
   }
-  deriving (Eq, Generic, Hashable)
+  deriving (Eq)
+
+instance Hashable HoedFunctionKey where
+  hashWithSalt s HoedFunctionKey{..} =
+    s `hashWithSalt` label
+      `hashWithSalt` arity
+      `hashWithSalt` clauses
 
 type HoedCallKey = Int
 
 data HoedCallDetails = HoedCallDetails
   { argValues
-  , clauseValues :: !([Hashed String])
-  , result :: !(Hashed String)
+  , clauseValues :: !([Hashed Text])
+  , result :: !(Hashed Text)
   , depends, parents :: ![HoedCallKey]
   } deriving (Eq, Generic, Hashable)
 
@@ -120,7 +130,7 @@ annotateCompTree compTree = AnnotatedCompTree{..}  where
   succsMap  = HMS.fromListWith (++) [ (s, [t]) | Arc s t _ <- arcs compTree]
 
 ---------------------------------------------------------------------------
-hoedCallValues :: HoedCallDetails -> [Hashed String]
+hoedCallValues :: HoedCallDetails -> [Hashed Text]
 hoedCallValues HoedCallDetails{..} = result : (argValues ++ clauseValues)
 
 getRelatives rel v =
@@ -135,12 +145,12 @@ getRelatives rel v =
 extractHoedCall :: AnnotatedCompTree -> Vertex -> Maybe (Hashed HoedFunctionKey, HoedCallKey, HoedCallDetails)
 extractHoedCall hoedCompTree v@Vertex {vertexStmt = c@CompStmt {stmtDetails = StmtLam {..}, ..}} =
   Just
-    ( hashed $ HoedFunctionKey stmtLabel (length stmtLamArgs) (map fst clauses)
+    ( hashed $ HoedFunctionKey (pack stmtLabel) (length stmtLamArgs) (map fst clauses)
     , stmtIdentifier
-    , HoedCallDetails (map hashed stmtLamArgs) (map snd clauses) (hashed stmtLamRes) depends parents)
+    , HoedCallDetails (map (hashed . pack) stmtLamArgs) (map snd clauses) (hashed (pack stmtLamRes)) depends parents)
   where
     clauses =
-      [ (stmtLabel, hashed stmtCon)
+      [ (pack stmtLabel, hashed (pack stmtCon))
       | Vertex {vertexStmt = CompStmt {stmtLabel, stmtDetails = StmtCon {..}}} <-
           getSuccs hoedCompTree v
       ]
@@ -167,12 +177,11 @@ convert hoedCompTree = DebugTrace {..}
       [ Function {..}
       | (unhashed -> HoedFunctionKey {..}, _) <- sortedFunctionCalls
       , let funResult = "$result"
-      , let funArguments = map (\i -> "$arg" ++ show i) [1 .. arity] ++ clauses
+      , let funArguments = map (\i -> "$arg" <> pack(show i)) [1 .. arity] ++ clauses
       -- HACK Expects a multiline label with the function name in the first line, and the code afterwards
-      , let funName:linesSource = lines label
-      , let funSource = unlines linesSource
+      , let (funName,funSource) = T.break (=='\n') label
       ]
-    variablesHashed :: [Hashed String]
+    variablesHashed :: [Hashed Text]
     variablesHashed =
       Set.toList $
       Set.fromList $
@@ -200,7 +209,7 @@ convert hoedCompTree = DebugTrace {..}
       , let callVals =
               map (second lookupVariableIndex) $
               ("$result", result) :
-              zipWith (\i v -> ("$arg" ++ show i, v)) [1 ..] argValues ++
+              zipWith (\i v -> ("$arg" <> pack (show i), v)) [1 ..] argValues ++
               zip clauses clauseValues
       , let callDepends = map lookupCallIndex depends
       , let callParents = map lookupCallIndex parents

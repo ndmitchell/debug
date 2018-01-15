@@ -25,6 +25,7 @@ library:
       - libgraph >= 1.14
       - monoidal-containers
       - template-haskell
+      - text
       - uniplate
       - unordered-containers
 
