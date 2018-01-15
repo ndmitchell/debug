@@ -34,7 +34,7 @@ The call to `runO` starts a web browser to view the information recorded by Hoed
 - Polymorphic numeric literals must be annotated with a specific type, for the same reason as above
 - Types under observation must be given an 'Observable' instance, otherwise they will fall back to the default one, which prints `<?>` for non observable types. 
 
-The 'Observable' class is derivable for 'Generic' types, although you may wish to use 'observeBase' for types with a non trivial 'Show' instance, or 'observeOpaque' for non observable types. 
+The 'Observable' class is derivable for 'Generic' types, and the `debug'` TH wrapper can optionally append `deriving anyclass Observable` to Generic types automatically. 
 
 ## Motivation
 

@@ -15,6 +15,8 @@ module Debug
   , HoedOptions(..)
   , defaultHoedOptions
   , debug
+  , debug'
+  , Config(..)
   , debugViewTrace
   , debugJSONTrace
   , debugPrintTrace
@@ -24,10 +26,12 @@ module Debug
 import Control.Monad
 import Data.Bifunctor
 import Data.Char
+import Data.Data
 import Data.Generics.Uniplate.Data
 import Data.Graph.Libgraph
 import qualified Data.HashMap.Monoidal as HM
 import qualified Data.HashMap.Strict   as HMS
+import qualified Data.HashSet          as Set
 import Data.Hashable
 import Data.List
 import Data.List.Extra
@@ -190,13 +194,32 @@ snub = map head . group . sort
 ----------------------------------------------------------------------------
 -- Template Haskell
 
+data Config = Config
+  { generateGenericInstances, generateObservableInstances :: Bool
+  , excludeFromInstanceGeneration :: [String]
+  }
+
+debug = debug' (Config False False [])
+
 -- | A @TemplateHaskell@ wrapper to convert normal functions into traced functions.
-debug :: Q [Dec] -> Q [Dec]
-debug q = do
-  missing <- filterM (fmap not . isExtEnabled) [ViewPatterns, PartialTypeSignatures]
+debug' :: Config -> Q [Dec] -> Q [Dec]
+debug' Config{..} q = do
+  missing <-
+    filterM
+      (fmap not . isExtEnabled)
+      ([ ViewPatterns
+       , PartialTypeSignatures
+       , ExtendedDefaultRules
+       , FlexibleContexts
+       ] ++
+       [DeriveAnyClass | generateObservableInstances] ++
+       [DerivingStrategies | generateObservableInstances] ++
+       [DeriveGeneric | generateGenericInstances]
+      )
   when (missing /= []) $
-      error $ "\ndebug [d| ... |] requires additional extensions:\n" ++
-              "{-# LANGUAGE " ++ intercalate ", " (map show missing) ++ " #-}\n"
+    error $
+    "\ndebug [d| ... |] requires additional extensions:\n" ++
+    "{-# LANGUAGE " ++ intercalate ", " (map show missing) ++ " #-}\n"
   decs <- q
   let askSig x =
         listToMaybe $
@@ -216,6 +239,7 @@ debug q = do
           decs
   names <-
     sequence [(n, ) <$> newName (mkDebugName (nameBase n)) | n <- sourceNames]
+  let excludedSet = Set.fromList excludeFromInstanceGeneration
   fmap concat $
     forM decs $ \dec ->
       case dec of
@@ -241,11 +265,43 @@ debug q = do
               funD n [clause [] (normalB [|observe label $(varE n')|]) []]
             let clauses' = transformBi (adjustInnerSigD . adjustValD) clauses
             return [newDecl, FunD n' clauses']
-        SigD n ty | Just n' <- lookup n names, not (hasRankNTypes ty) -> do
-          let ty' = adjustTy ty
-          ty'' <- renameForallTyVars ty'
-          return [SigD n ty', SigD n' ty'']
+        SigD n ty
+          | Just n' <- lookup n names
+          , not (hasRankNTypes ty) -> do
+            let ty' = adjustTy ty
+            ty'' <- renameForallTyVars ty'
+            return [SigD n ty', SigD n' ty'']
+        DataD cxt1 name tt k cons derivs
+          | generateGenericInstances
+          , not $ Set.member (prettyPrint name) excludedSet
+          , [] <- filterDerivingClausesByName ''Generic derivs
+          , derivGen <- DerivClause (Just StockStrategy) [ConT ''Generic]
+          , derivObs <- DerivClause (Just AnyclassStrategy) [ConT ''Observable]
+          -> return [DataD cxt1 name tt k cons (derivGen : derivObs : derivs)]
+        DataD cxt1 name tt k cons derivs
+          | generateObservableInstances
+          , not $ Set.member (prettyPrint name) excludedSet
+          , _:_ <- filterDerivingClausesByName ''Generic derivs
+          , []  <- filterDerivingClausesByName ''Observable derivs
+          , derivObs <- DerivClause (Just AnyclassStrategy) [ConT ''Observable]
+          -> return [DataD cxt1 name tt k cons (derivObs : derivs)]
+        NewtypeD cxt1 name tt k cons derivs
+          | generateGenericInstances
+          , not $ Set.member (prettyPrint name) excludedSet
+          , [] <- filterDerivingClausesByName ''Generic derivs
+          , derivGen <- DerivClause (Just StockStrategy) [ConT ''Generic]
+          , derivObs <- DerivClause (Just AnyclassStrategy) [ConT ''Observable]
+          -> return [NewtypeD cxt1 name tt k cons (derivGen : derivObs : derivs)]
+        NewtypeD cxt1 name tt k cons derivs
+          | generateObservableInstances
+          , not $ Set.member (prettyPrint name) excludedSet
+          , _:_ <- filterDerivingClausesByName ''Generic derivs
+          , []  <- filterDerivingClausesByName ''Observable derivs
+          , derivObs <- DerivClause (Just AnyclassStrategy) [ConT ''Observable]
+          -> return [NewtypeD cxt1 name tt k cons (derivObs : derivs)]
         _ -> return [dec]
+
+filterDerivingClausesByName n' derivs = [ it | it@(DerivClause _ preds) <- derivs , ConT n <- preds , n == n']
 
 mkDebugName n@(c:_)
   | isAlpha c || c == '_' = n ++ "_debug"
@@ -256,7 +312,7 @@ adjustInnerSigD other = other
 
 ----------------------------------------------------------
 -- With a little help from Neil Mitchell's debug package
-
+prettyPrint :: (Data a, Ppr a) => a -> String
 prettyPrint = pprint . transformBi f
     where f (Name x _) = Name x NameS -- avoid nasty qualifications
 
