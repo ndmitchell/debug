@@ -24,6 +24,7 @@ module Debug
   , debugJSONTrace
   , debugPrintTrace
   , debugSaveTrace
+  , pack
   ) where
 
 import           Control.Monad
@@ -100,7 +101,7 @@ type HoedCallKey = Int
 
 data HoedCallDetails = HoedCallDetails
   { argValues
-  , clauseValues :: !([Hashed Text])
+  , clauseValues :: ![Hashed Text]
   , result :: !(Hashed Text)
   , depends, parents :: ![HoedCallKey]
   } deriving (Eq, Generic, Hashable)
@@ -145,12 +146,12 @@ getRelatives rel v =
 extractHoedCall :: AnnotatedCompTree -> Vertex -> Maybe (Hashed HoedFunctionKey, HoedCallKey, HoedCallDetails)
 extractHoedCall hoedCompTree v@Vertex {vertexStmt = c@CompStmt {stmtDetails = StmtLam {..}, ..}} =
   Just
-    ( hashed $ HoedFunctionKey (pack stmtLabel) (length stmtLamArgs) (map fst clauses)
+    ( hashed $ HoedFunctionKey (stmtLabel) (length stmtLamArgs) (map fst clauses)
     , stmtIdentifier
-    , HoedCallDetails (map (hashed . pack) stmtLamArgs) (map snd clauses) (hashed (pack stmtLamRes)) depends parents)
+    , HoedCallDetails (map hashed stmtLamArgs) (map snd clauses) (hashed stmtLamRes) depends parents)
   where
     clauses =
-      [ (pack stmtLabel, hashed (pack stmtCon))
+      [ (stmtLabel, hashed stmtCon)
       | Vertex {vertexStmt = CompStmt {stmtLabel, stmtDetails = StmtCon {..}}} <-
           getSuccs hoedCompTree v
       ]
@@ -279,7 +280,7 @@ debug' Config{..} q = do
             --      which is then unpacked by 'convert'
                 label = (nb ++ "\n" ++ prettyPrint dec)
             newDecl <-
-              funD n [clause [] (normalB [|observe label $(varE n')|]) []]
+              funD n [clause [] (normalB [|observe (pack label) $(varE n')|]) []]
             let clauses' = transformBi adjustValD clauses
             return [newDecl, ValD (VarP n') b clauses']
         FunD n clauses
@@ -288,9 +289,9 @@ debug' Config{..} q = do
                 nb = nameBase n
             -- HACK We embed the source code of the function in the label,
             --      which is then unpacked by 'convert'
-                label = (nb ++ "\n" ++ prettyPrint dec)
+                label = nb ++ "\n" ++ prettyPrint dec
             newDecl <-
-              funD n [clause [] (normalB [|observe label $(varE n')|]) []]
+              funD n [clause [] (normalB [|observe (pack label) $(varE n')|]) []]
             let clauses' = transformBi (adjustInnerSigD . adjustValD) clauses
             return [newDecl, FunD n' clauses']
         SigD n ty
@@ -386,7 +387,7 @@ hasRankNTypes' typ = not $ null [ () | ForallT{} <- universe typ]
 adjustValD decl@ValD{} = transformBi adjustPat decl
 adjustValD other       = other
 
-adjustPat (VarP x) = ViewP (VarE 'observe `AppE` toLit x) (VarP x)
+adjustPat (VarP x) = ViewP (VarE 'observe `AppE` (VarE 'pack `AppE` toLit x)) (VarP x)
 adjustPat x        = x
 
 toLit (Name (OccName x) _) = LitE $ StringL x
