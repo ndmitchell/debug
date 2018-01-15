@@ -1,3 +1,4 @@
+{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveAnyClass  #-}
 {-# LANGUAGE DeriveGeneric   #-}
@@ -89,8 +90,8 @@ type HoedCallKey = Int
 
 data HoedCallDetails = HoedCallDetails
   { argValues
-  , clauseValues :: !([String])
-  , result :: !String
+  , clauseValues :: !([Hashed String])
+  , result :: !(Hashed String)
   , depends, parents :: ![HoedCallKey]
   } deriving (Eq, Generic, Hashable)
 
@@ -119,7 +120,7 @@ annotateCompTree compTree = AnnotatedCompTree{..}  where
   succsMap  = HMS.fromListWith (++) [ (s, [t]) | Arc s t _ <- arcs compTree]
 
 ---------------------------------------------------------------------------
-hoedCallValues :: HoedCallDetails -> [String]
+hoedCallValues :: HoedCallDetails -> [Hashed String]
 hoedCallValues HoedCallDetails{..} = result : (argValues ++ clauseValues)
 
 getRelatives rel v =
@@ -131,15 +132,15 @@ getRelatives rel v =
         , callKey <- getRelatives rel v'
       ]
 
-extractHoedCall :: AnnotatedCompTree -> Vertex -> Maybe (HoedFunctionKey, HoedCallKey, HoedCallDetails)
+extractHoedCall :: AnnotatedCompTree -> Vertex -> Maybe (Hashed HoedFunctionKey, HoedCallKey, HoedCallDetails)
 extractHoedCall hoedCompTree v@Vertex {vertexStmt = c@CompStmt {stmtDetails = StmtLam {..}, ..}} =
   Just
-    ( HoedFunctionKey stmtLabel (length stmtLamArgs) (map fst clauses)
+    ( hashed $ HoedFunctionKey stmtLabel (length stmtLamArgs) (map fst clauses)
     , stmtIdentifier
-    , HoedCallDetails stmtLamArgs (map snd clauses) stmtLamRes depends parents)
+    , HoedCallDetails (map hashed stmtLamArgs) (map snd clauses) (hashed stmtLamRes) depends parents)
   where
     clauses =
-      [ (stmtLabel, stmtCon)
+      [ (stmtLabel, hashed stmtCon)
       | Vertex {vertexStmt = CompStmt {stmtLabel, stmtDetails = StmtCon {..}}} <-
           getSuccs hoedCompTree v
       ]
@@ -152,7 +153,7 @@ extractHoedCall _ _ = Nothing
 convert :: CompTree -> DebugTrace
 convert hoedCompTree = DebugTrace {..}
   where
-    hoedFunctionCalls :: HoedFunctionKey :-> [(HoedCallKey, HoedCallDetails)]
+    hoedFunctionCalls :: Hashed HoedFunctionKey :-> [(HoedCallKey, HoedCallDetails)]
     hoedFunctionCalls =
       HM.fromList
         [ (fnKey, [(callKey, callDetails)])
@@ -160,21 +161,24 @@ convert hoedCompTree = DebugTrace {..}
             map (extractHoedCall (annotateCompTree hoedCompTree)) (vertices hoedCompTree)
         ]
     sortedFunctionCalls =
-      sortOn (\(x, _) -> (label x, arity x)) $ toList hoedFunctionCalls
+      sortOn (\(unhashed -> x, _) -> (label x, arity x)) $ toList hoedFunctionCalls
 
     functions =
       [ Function {..}
-      | (HoedFunctionKey {..}, _) <- sortedFunctionCalls
+      | (unhashed -> HoedFunctionKey {..}, _) <- sortedFunctionCalls
       , let funResult = "$result"
       , let funArguments = map (\i -> "$arg" ++ show i) [1 .. arity] ++ clauses
       -- HACK Expects a multiline label with the function name in the first line, and the code afterwards
       , let funName:linesSource = lines label
       , let funSource = unlines linesSource
       ]
-    variables :: [String]
-    variables =
-      snub $
-      foldMap (foldMap (hoedCallValues . snd) . toList) hoedFunctionCalls
+    variablesHashed :: [Hashed String]
+    variablesHashed =
+      Set.toList $
+      Set.fromList $
+      foldMap (foldMap (hoedCallValues . snd)) hoedFunctionCalls
+
+    variables = map unhashed variablesHashed
 
     lookupFunctionIndex =
       fromMaybe (error "bug in convert: lookupFunctionIndex") .
@@ -182,7 +186,7 @@ convert hoedCompTree = DebugTrace {..}
 
     lookupVariableIndex =
       fromMaybe (error "bug in convert: lookupVariableIndex") .
-      (`HMS.lookup` HMS.fromList (zip variables [0 ..]))
+      (`HMS.lookup` HMS.fromList (zip variablesHashed [0 ..]))
 
     lookupCallIndex =
       fromMaybe (error "bug in convert: lookupCallIndex") .
@@ -190,9 +194,9 @@ convert hoedCompTree = DebugTrace {..}
 
     callsTable =
       [ (callId, CallData {..})
-      | (k@HoedFunctionKey {..}, calls) <- toList sortedFunctionCalls
-      , (callId, HoedCallDetails {..}) <- toList calls
+      | (k@(unhashed -> HoedFunctionKey {..}), calls) <- toList sortedFunctionCalls
       , let callFunctionId = lookupFunctionIndex k
+      , (callId, HoedCallDetails {..}) <- toList calls
       , let callVals =
               map (second lookupVariableIndex) $
               ("$result", result) :
