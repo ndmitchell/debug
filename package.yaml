@@ -17,6 +17,7 @@ dependencies:
 library:
     source-dirs:      src
     dependencies: 
+      - clock
       - debug
       - Hoed >= 0.4.1
       - extra

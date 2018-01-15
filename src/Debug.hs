@@ -52,6 +52,7 @@ import           GHC.Exts                    (IsList (..))
 import           GHC.Generics
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
+import           System.Clock
 
 -- | Runs the program collecting a debugging trace and then opens a web browser to inspect it.
 --
@@ -65,8 +66,15 @@ debugRun program = getDebugTrace defaultHoedOptions {prettyWidth = 160, verbose 
 getDebugTrace :: HoedOptions -> IO () -> IO DebugTrace
 getDebugTrace hoedOptions program = do
   hoedAnalysis <- runO' hoedOptions program
+  putStrLn "Please wait while the debug trace is constructed"
   let !compTree = hoedCompTree hoedAnalysis
-  return $ convert compTree
+  t <- getTime Monotonic
+  let result = convert compTree
+      !_     = length(variables result)
+  t' <- getTime Monotonic
+  let compTime = fromIntegral(toNanoSecs(diffTimeSpec t t')) * 1e-9
+  putStrLn $ "=== Debug Session (" ++ show compTime ++ " seconds) ==="
+  return result
 
 type a :-> b = HM.MonoidalHashMap a b
 
