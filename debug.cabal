@@ -36,7 +36,6 @@ library
         bytestring,
         aeson,
         containers,
-        filepath,
         ghc-prim,
         extra,
         directory,
