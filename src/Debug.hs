@@ -1,12 +1,13 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DeriveAnyClass  #-}
+{-# LANGUAGE DeriveGeneric   #-}
+{-# LANGUAGE LambdaCase      #-}
+{-# LANGUAGE NamedFieldPuns  #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TupleSections   #-}
+{-# LANGUAGE TypeOperators   #-}
 module Debug
   ( Observable(..)
   , observe
@@ -23,27 +24,34 @@ module Debug
   , debugSaveTrace
   ) where
 
-import Control.Monad
-import Data.Bifunctor
-import Data.Char
-import Data.Data
-import Data.Generics.Uniplate.Data
-import Data.Graph.Libgraph
-import qualified Data.HashMap.Monoidal as HM
-import qualified Data.HashMap.Strict   as HMS
-import qualified Data.HashSet          as Set
-import Data.Hashable
-import Data.List
-import Data.List.Extra
-import Data.Maybe
-import Debug.Record as D (DebugTrace(..), Function(..), CallData(..), debugViewTrace, debugJSONTrace, debugSaveTrace, debugPrintTrace)
-import Debug.Hoed hiding (runO)
-import Debug.Hoed.CompTree
-import Debug.Hoed.Render
-import GHC.Generics
-import GHC.Exts (IsList(..))
-import Language.Haskell.TH
-import Language.Haskell.TH.Syntax
+import           Control.Monad
+import           Data.Bifunctor
+import           Data.Char
+import           Data.Data
+import           Data.Generics.Uniplate.Data
+import           Data.Graph.Libgraph
+import           Data.Hashable
+import qualified Data.HashMap.Monoidal       as HM
+import qualified Data.HashMap.Strict         as HMS
+import           Data.HashSet                (HashSet)
+import qualified Data.HashSet                as Set
+import           Data.List
+import           Data.List.Extra
+import           Data.Maybe
+import           Debug.Hoed                  hiding (runO)
+import           Debug.Hoed.CompTree
+import           Debug.Hoed.Render
+import           Debug.Record                as D (CallData (..),
+                                                   DebugTrace (..),
+                                                   Function (..),
+                                                   debugJSONTrace,
+                                                   debugPrintTrace,
+                                                   debugSaveTrace,
+                                                   debugViewTrace)
+import           GHC.Exts                    (IsList (..))
+import           GHC.Generics
+import           Language.Haskell.TH
+import           Language.Haskell.TH.Syntax
 
 -- | Runs the program collecting a debugging trace and then opens a web browser to inspect it.
 --
@@ -63,8 +71,8 @@ getDebugTrace hoedOptions program = do
 type a :-> b = HM.MonoidalHashMap a b
 
 data HoedFunctionKey = HoedFunctionKey
-  { label :: !String
-  , arity :: !Int
+  { label   :: !String
+  , arity   :: !Int
   , clauses :: !([String])
   }
   deriving (Eq, Generic, Hashable)
@@ -79,7 +87,7 @@ data HoedCallDetails = HoedCallDetails
   } deriving (Eq, Generic, Hashable)
 
 instance Hashable Vertex where
-  hashWithSalt s RootVertex = s `hashWithSalt` (-1 :: Int)
+  hashWithSalt s RootVertex    = s `hashWithSalt` (-1 :: Int)
   hashWithSalt s (Vertex cs _) = s `hashWithSalt` cs
 instance Hashable CompStmt where
   hashWithSalt s cs = hashWithSalt s (stmtIdentifier cs)
@@ -88,7 +96,7 @@ instance Hashable CompStmt where
 -- Cached pred and succ relationships
 
 data AnnotatedCompTree = AnnotatedCompTree
-  { compTree :: CompTree
+  { compTree           :: CompTree
   , predsMap, succsMap:: HMS.HashMap Vertex [Vertex]
   }
 getPreds :: AnnotatedCompTree -> Vertex -> [Vertex]
@@ -196,7 +204,7 @@ snub = map head . group . sort
 
 data Config = Config
   { generateGenericInstances, generateObservableInstances :: Bool
-  , excludeFromInstanceGeneration :: [String]
+  , excludeFromInstanceGeneration                         :: [String]
   }
 
 debug = debug' (Config False False [])
@@ -308,7 +316,7 @@ mkDebugName n@(c:_)
   | otherwise = n ++ "??"
 
 adjustInnerSigD (SigD n ty) = SigD n (adjustTy ty)
-adjustInnerSigD other = other
+adjustInnerSigD other       = other
 
 ----------------------------------------------------------
 -- With a little help from Neil Mitchell's debug package
@@ -332,7 +340,7 @@ adjustTy other = adjustTy $ ForallT [] [] other
 renameForallTyVars (ForallT vars ctxt typ) = do
   let allVarNames = case vars of
                       []-> snub $ universeBi ctxt ++ universeBi typ
-                      _ -> map getVarNameFromTyBndr vars
+                      _  -> map getVarNameFromTyBndr vars
   vv <- HMS.fromList <$> mapM (\v -> (v,) <$> newName (pprint v)) allVarNames
   let Just renamedCtxt = transformBiM (applyRenaming vv) ctxt
       Just renamedTyp  = transformBiM (applyRenaming vv) typ
@@ -343,16 +351,16 @@ renameForallTyVars (ForallT vars ctxt typ) = do
 renameForallTyVars other = return other
 
 applyRenaming nn (VarT n) = VarT <$> HMS.lookup n nn
-applyRenaming _ other = return other
+applyRenaming _ other     = return other
 
-getVarNameFromTyBndr (PlainTV n) = n
+getVarNameFromTyBndr (PlainTV n)    = n
 getVarNameFromTyBndr (KindedTV n _) = n
 
-applyRenamingToTyBndr vv (PlainTV n) = plainTV <$> HMS.lookup n vv
+applyRenamingToTyBndr vv (PlainTV n)    = plainTV <$> HMS.lookup n vv
 applyRenamingToTyBndr vv (KindedTV n k) = (`KindedTV` k) <$> HMS.lookup n vv
 
 hasRankNTypes (ForallT vars ctxt typ) = hasRankNTypes' typ
-hasRankNTypes typ = hasRankNTypes' typ
+hasRankNTypes typ                     = hasRankNTypes' typ
 hasRankNTypes' typ = not $ null [ () | ForallT{} <- universe typ]
 
 adjustValD decl@ValD{} = transformBi adjustPat decl
