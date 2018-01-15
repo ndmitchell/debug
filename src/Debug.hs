@@ -173,14 +173,6 @@ convert hoedCompTree = DebugTrace {..}
     sortedFunctionCalls =
       sortOn (\(unhashed -> x, _) -> (label x, arity x)) $ toList hoedFunctionCalls
 
-    functions =
-      [ Function {..}
-      | (unhashed -> HoedFunctionKey {..}, _) <- sortedFunctionCalls
-      , let funResult = "$result"
-      , let funArguments = map (\i -> "$arg" <> pack(show i)) [1 .. arity] ++ clauses
-      -- HACK Expects a multiline label with the function name in the first line, and the code afterwards
-      , let (funName,funSource) = T.break (=='\n') label
-      ]
     variablesHashed :: [Hashed Text]
     variablesHashed =
       Set.toList $
@@ -201,18 +193,25 @@ convert hoedCompTree = DebugTrace {..}
       fromMaybe (error "bug in convert: lookupCallIndex") .
       (`HMS.lookup` HMS.fromList (zip (map fst callsTable) [0 ..]))
 
-    callsTable =
-      [ (callId, CallData {..})
-      | (k@(unhashed -> HoedFunctionKey {..}), calls) <- toList sortedFunctionCalls
+    (functions, concat -> callsTable) =
+      unzip
+      [ (Function{..}
+        ,[( callId, CallData {..})
+         | (callId, HoedCallDetails {..}) <- toList calls
+         , let callVals =
+                 map (second lookupVariableIndex) $
+                 ("$result", result) :
+                 zipWith (\i v -> ("$arg" <> pack (show i), v)) [1 ..] argValues ++
+                 zip clauses clauseValues
+         , let callDepends = map lookupCallIndex depends
+         , let callParents = map lookupCallIndex parents
+         ])
+      | (k@(unhashed -> HoedFunctionKey {..}), calls) <- sortedFunctionCalls
       , let callFunctionId = lookupFunctionIndex k
-      , (callId, HoedCallDetails {..}) <- toList calls
-      , let callVals =
-              map (second lookupVariableIndex) $
-              ("$result", result) :
-              zipWith (\i v -> ("$arg" <> pack (show i), v)) [1 ..] argValues ++
-              zip clauses clauseValues
-      , let callDepends = map lookupCallIndex depends
-      , let callParents = map lookupCallIndex parents
+      , let funResult = "$result"
+      , let funArguments = map (\i -> "$arg" <> pack(show i)) [1 .. arity] ++ clauses
+      -- HACK Expects a multiline label with the function name in the first line, and the code afterwards
+      , let (funName,funSource) = T.break (=='\n') label
       ]
 
     calls = map snd callsTable
