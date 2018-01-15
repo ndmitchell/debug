@@ -1,12 +1,16 @@
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE ViewPatterns #-}
+
 module Main (main) where
 
 import Control.Monad
+import Data.Aeson
 import Data.Char
 import Data.List
+import Data.Maybe
 import Data.Yaml
 import Data.Yaml.Config
 import GHC.Generics
@@ -28,13 +32,46 @@ usage progName = unlines [
   "If no SOURCE or if SOURCE is `-', read standard input."
   ]
 
-data Config = Config
-  { excluded :: [String]
-  , instrumentMain :: Bool
-  , verbose :: Bool
-  } deriving (FromJSON, ToJSON, Generic, Show)
+data Config = Config_
+  { _excluded :: Maybe [String]
+  , _instrumentMain :: Maybe Bool
+  , _disablePartialTypeSignatureWarnings :: Maybe Bool
+  , _enableExtendedDefaultingRules :: Maybe Bool
+  , _generateObservableInstances :: Maybe Bool
+  , _generateGenericInstances :: Maybe Bool
+  , _excludedFromInstanceGeneration :: Maybe [String]
+  , _verbose :: Maybe Bool
+  } deriving (Generic, Show)
 
-defaultConfig = Config [] True False
+configJsonOptions = defaultOptions{fieldLabelModifier = tail}
+
+instance FromJSON Config where parseJSON = genericParseJSON configJsonOptions
+instance ToJSON Config where toJSON = genericToJSON configJsonOptions
+
+
+pattern Config { excluded
+               , instrumentMain
+               , disablePartialTypeSignatureWarnings
+               , enableExtendedDefaultingRules
+               , generateGenericInstances
+               , generateObservableInstances
+               , excludedFromInstanceGeneration
+               , verbose
+               } <-
+  Config_
+  { _excluded = (fromMaybe [] -> excluded)
+  , _instrumentMain = (fromMaybe True -> instrumentMain)
+  , _disablePartialTypeSignatureWarnings = (fromMaybe True -> disablePartialTypeSignatureWarnings)
+  , _enableExtendedDefaultingRules = (fromMaybe False -> enableExtendedDefaultingRules)
+  , _generateObservableInstances = (fromMaybe False -> generateObservableInstances)
+  , _generateGenericInstances = (fromMaybe False -> generateGenericInstances)
+  , _excludedFromInstanceGeneration = (fromMaybe [] -> excludedFromInstanceGeneration)
+  , _verbose = (fromMaybe False -> verbose)
+  }
+  where Config a b c d e f g h = Config_ (Just a) (Just b) (Just c) (Just d) (Just e) (Just f) (Just g) (Just h)
+
+defaultConfig :: Config
+defaultConfig = Config_ Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 readConfig :: IO Config
 readConfig = do
@@ -61,8 +98,22 @@ defConfig = unlines
   , "# If true then insert a call to debugRun in the main function."
   , "instrumentMain: true"
   , ""
+  , "# If true, instruct the debug TH wrapper to insert Observable instances for types that derive Generic."
+  , "generateGenericInstances: false"
+  , ""
+  , "# If true, instruct the debug TH wrapper to insert Generic instances for types that don't derive Generic."
+  , "generateGenericInstances: false"
+  , ""
+  , "# List of types excluded from instance generation"
+  , "excludedFromInstanceGeneration: []"
+  , ""
   , "# If true, print a line for every instrumented module."
   , "verbose: false"
+  , ""
+  , "# If true, enable GHC extended defaulting rules. This is often required when using debug-hoed"
+  , "enableExtendedDefaultingRules: true"
+  , ""
+  , ""
   ]
 
 main :: IO ()
@@ -92,23 +143,44 @@ main = do
   when verbose $
     putStrLn $ "[debug-pp] Instrumented " ++ orig
 
-instrument Config{..} contents
+instrument Config {..} contents
   | name `elem` excluded = contents
   | otherwise = unlines [top', modules', body'']
   where
-    (top,name,modules,body) = parseModule contents
-    modules' = unlines $ modules ++ ["import qualified Debug"]
+    (top, name, modules, body) = parseModule contents
+    modules' = unlines $ modules ++
+      ["import qualified Debug"] ++
+      ["import qualified GHC.Generics" | generateGenericInstances]
     top' =
-      unlines
-        $ "{-# LANGUAGE TemplateHaskell #-}"
-        : "{-# LANGUAGE PartialTypeSignatures #-}"
-        : "{-# LANGUAGE ViewPatterns #-}"
-        : "{-# LANGUAGE FlexibleContexts #-}"
-        : "{-# LANGUAGE ExtendedDefaultRules #-}"
-        : "{-# OPTIONS -Wno-partial-type-signatures #-}"
-        : top
-    body'  = map (if instrumentMain then instrumentMainFunction else id) body
-    body'' = unlines $ "Debug.debug [d|" : map indent (body' ++ ["  |]"])
+      unlines $
+      [ "{-# LANGUAGE TemplateHaskell #-}"
+      , "{-# LANGUAGE PartialTypeSignatures #-}"
+      , "{-# LANGUAGE ViewPatterns #-}"
+      , "{-# LANGUAGE FlexibleContexts #-}"
+      ] ++
+      [ "{-# OPTIONS -Wno-partial-type-signatures #-}"
+      | disablePartialTypeSignatureWarnings
+      ] ++
+      ["{-# LANGUAGE ExtendedDefaultRules #-}" | enableExtendedDefaultingRules] ++
+      ["{-# LANGUAGE DeriveAnyClass #-}" | generateObservableInstances] ++
+      ["{-# LANGUAGE DerivingStrategies #-}" | generateObservableInstances] ++
+      ["{-# LANGUAGE DeriveGeneric #-}" | generateGenericInstances] ++ top
+    body' =
+      map
+        (if instrumentMain
+           then instrumentMainFunction
+           else id)
+        body
+    debugWrapper
+      | not (generateGenericInstances || generateObservableInstances) =
+        "Debug.debug"
+      | otherwise =
+        printf
+          "Debug.debug' Debug.Config{Debug.generateGenericInstances=%s,Debug.generateObservableInstances=%s, Debug.excludeFromInstanceGeneration=%s}"
+          (show generateGenericInstances)
+          (show generateObservableInstances)
+          (show excludedFromInstanceGeneration)
+    body'' = unlines $ (debugWrapper ++ " [d|") : map indent (body' ++ ["  |]"])
 
 instrumentMainFunction l
   | ('m':'a':'i':'n':rest) <- l
