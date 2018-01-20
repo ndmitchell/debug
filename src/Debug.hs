@@ -94,8 +94,8 @@ adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_))
     let clauses2 = map addTag $ transformBi (adjustValD tag) clauses
     let args2 = [VarE 'var `AppE` VarE tag `AppE` toLitPre "$" a `AppE` VarE a | a <- args]
     let info = ConE 'Function `AppE`
-            (packLit $ toLit name) `AppE`
-            (packLit $ LitE (StringL $ prettyPrint $ maybeToList (askSig name) ++ [o])) `AppE`
+            packLit (toLit name) `AppE`
+            packLit (LitE (StringL $ prettyPrint $ maybeToList (askSig name) ++ [o])) `AppE`
             ListE (map (packLit . toLitPre "$") args) `AppE`
             packLit (LitE (StringL "$result"))
     let body2 = VarE 'var `AppE` VarE tag `AppE` LitE (StringL "$result") `AppE` foldl AppE (VarE inner) (VarE tag : args2)
@@ -105,7 +105,7 @@ adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_))
 adjustDec askSig x = return x
 
 transformApps :: Name -> [Clause] -> Q [Clause]
-transformApps tag clauses = mapM (appsFromClause tag) clauses
+transformApps tag = mapM (appsFromClause tag)
 
 appsFromClause :: Name -> Clause -> Q Clause
 appsFromClause tag cl@(Clause pats body decs) = do
