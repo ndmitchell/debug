@@ -123,6 +123,10 @@ appsFromExp tag e@(InfixE e1May e2 e3May) = do
     newE2 <- appsFromExp tag e2
     newE3 <- appsFromExpMay tag e3May
     adjustApp tag (InfixE newE1 newE2 newE3)
+appsFromExp tag e@(CaseE exp matches) = do
+    newExp <- appsFromExp tag exp
+    newMatches <- traverse (appsFromMatch tag) matches
+    return $ CaseE newExp newMatches
 appsFromExp tag e = return e
 
 appsFromExpMay :: Name -> Maybe Exp -> Q (Maybe Exp)
@@ -135,6 +139,12 @@ appsFromDec tag d@(ValD pat body dec) = do
     return $ ValD pat newBody dec
 appsFromDec tag d@(FunD name subClauses) = return d
 appsFromDec _ d = return d
+
+appsFromMatch :: Name -> Match -> Q Match
+appsFromMatch tag (Match pat body decs) = do
+    newBody <- appsFromBody tag body
+    newDecs <- traverse (appsFromDec tag) decs
+    return $ Match pat newBody newDecs
 
 adjustApp :: Name -> Exp -> Q Exp
 adjustApp tag (AppE e1 e2) = do

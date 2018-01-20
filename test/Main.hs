@@ -65,7 +65,7 @@ debug [d|
 
 debug [d|
     lcm_gcd_log :: Int -> Int -> Float
-    lcm_gcd_log x y = 
+    lcm_gcd_log x y =
         let base = fromIntegral $ gcd x y
             val = fromIntegral (x `lcm` y) - base
         in logBase base val ** base
@@ -85,6 +85,25 @@ debug [d|
 --      logBase' = 3.0
 --      val = 27.0
 
+debug [d|
+    f :: Int -> Int
+    f = (2*)
+
+    case_test :: [Int] -> [Int] -> [Int]
+    case_test ys zs =
+        case ys of
+            x : xs -> f x : xs ++ zs
+            [] -> zs
+    |]
+--  expected:
+--      ys, $arg1 = [1,2,3]
+--      zs, $arg2 = [4,5,6]
+--      x = 1
+--      xs = [2,3]
+--      f = 2
+--      ++ = [2,3,4,5,6]
+--      : = [2,2,3,4,5,6]
+--      $result = [2,2,3,4,5,6]
 
 explicit :: (Ord a, Show a) => [a] -> [a]
 explicit = quicksort'
@@ -113,6 +132,7 @@ main = do
     example "quicksortBy" $ quicksortBy (<) "haskell"
     example "lcm_gcd" $ lcm_gcd 6 15
     example "lcm_gcd_log" $ lcm_gcd_log 6 15
+    example "case_test" $ case_test [1, 2, 3] [4, 5, 6]
     example "explicit" $ explicit "haskell"
     copyFile "output/quicksort.js" "trace.js" -- useful for debugging the HTML
 
