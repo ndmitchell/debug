@@ -29,6 +29,7 @@ module Debug.Record(
     ) where
 
 import Debug.Variables
+import Control.DeepSeq
 import Control.Exception
 import Control.Monad
 import Data.Aeson
@@ -72,6 +73,7 @@ data Function = Function
     deriving (Eq,Generic,Ord,Show)
 
 instance Hashable Function
+instance NFData Function
 
 -- | A single function call, used to attach additional information
 data Call = Call Function (IORef [(Text, Var)])
@@ -273,6 +275,7 @@ getDebugTrace = do
 instance FromJSON DebugTrace
 instance ToJSON DebugTrace where
   toEncoding = genericToEncoding defaultOptions
+instance NFData DebugTrace
 
 -- | A flat encoding of an observed call.
 data CallData = CallData
@@ -282,6 +285,8 @@ data CallData = CallData
   , callParents :: [Int]        -- ^ Indexes into the 'calls' table
   }
   deriving (Eq, Generic, Show)
+
+instance NFData CallData
 
 instance FromJSON CallData where
   parseJSON (Object v) =

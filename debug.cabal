@@ -37,6 +37,7 @@ library
         aeson,
         ghc-prim,
         extra,
+        deepseq,
         directory,
         hashable,
         template-haskell,
