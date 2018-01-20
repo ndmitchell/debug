@@ -271,7 +271,8 @@ getDebugTrace = do
   return $ DebugTrace infos (map T.pack vars) callEntries
 
 instance FromJSON DebugTrace
-instance ToJSON DebugTrace
+instance ToJSON DebugTrace where
+  toEncoding = genericToEncoding defaultOptions
 
 -- | A flat encoding of an observed call.
 data CallData = CallData
@@ -303,6 +304,14 @@ instance ToJSON CallData where
     ["$depends" .= toJSON callDepends | not(null callDepends)] ++
     ["$parents" .= toJSON callParents | not(null callParents)] ++
     map (uncurry (.=)) callVals
+  toEncoding CallData{..} = pairs ("" .= callFunctionId <> depends <> parents)
+    where
+      depends
+        | null callDepends = mempty
+        | otherwise = "$depends" .= callDepends
+      parents
+        | null callParents = mempty
+        | otherwise = "$parents" .= callParents
 
 functionJsonOptions = defaultOptions{fieldLabelModifier = f}
     where
@@ -314,3 +323,4 @@ instance FromJSON Function where
 
 instance ToJSON Function where
     toJSON = genericToJSON functionJsonOptions
+    toEncoding = genericToEncoding functionJsonOptions
