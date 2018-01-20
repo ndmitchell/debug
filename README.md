@@ -62,6 +62,13 @@ Use `debug-pp --defaults > .debug-pp.yaml` to dump a
 well-documented default configuration to a file, this way you can get started
 quickly.
 
+The configuration options include:
+* Exclude modules by name.
+* Instrument the `main` function to launch a web browser upon completion.
+* Select which language extensions are included automatically.
+* Configure the `debug-hoed` instrumentation to include e.g. deriving `Generic` and `Observable` instances
+
+
 Motivation
 -------------
 
