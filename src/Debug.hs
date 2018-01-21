@@ -86,7 +86,7 @@ type a :-> b = HM.MonoidalHashMap a b
 data HoedFunctionKey = HoedFunctionKey
   { label   :: !Text
   , arity   :: !Int
-  , clauses :: !([Text])
+  , clauses :: ![Text]
   }
   deriving (Eq)
 
@@ -100,7 +100,7 @@ type HoedCallKey = Int
 
 data HoedCallDetails = HoedCallDetails
   { argValues
-  , clauseValues :: !([Hashed Text])
+  , clauseValues :: ![Hashed Text]
   , result :: !(Hashed Text)
   , depends, parents :: ![HoedCallKey]
   } deriving (Eq, Generic, Hashable)
@@ -268,16 +268,16 @@ debug' Config{..} q = do
   names <-
     sequence [(n, ) <$> newName (mkDebugName (nameBase n)) | n <- sourceNames]
   let excludedSet = Set.fromList excludeFromInstanceGeneration
+        -- HACK We embed the source code of the function in the label,
+        --      which is then unpacked by 'convert'
+      createLabel n dec = nameBase n ++ "\n" ++ prettyPrint dec
   fmap concat $
     forM decs $ \dec ->
       case dec of
         ValD (VarP n) b clauses
           | checkSig n -> do
             let Just n' = lookup n names
-                nb = nameBase n
-            -- HACK We embed the source code of the function in the label,
-            --      which is then unpacked by 'convert'
-                label = (nb ++ "\n" ++ prettyPrint dec)
+                label = createLabel n dec
             newDecl <-
               funD n [clause [] (normalB [|observe label $(varE n')|]) []]
             let clauses' = transformBi adjustValD clauses
@@ -285,10 +285,7 @@ debug' Config{..} q = do
         FunD n clauses
           | checkSig n -> do
             let Just n' = lookup n names
-                nb = nameBase n
-            -- HACK We embed the source code of the function in the label,
-            --      which is then unpacked by 'convert'
-                label = (nb ++ "\n" ++ prettyPrint dec)
+                label = createLabel n dec
             newDecl <-
               funD n [clause [] (normalB [|observe label $(varE n')|]) []]
             let clauses' = transformBi (adjustInnerSigD . adjustValD) clauses
