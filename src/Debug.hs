@@ -1,25 +1,28 @@
-{-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DeriveAnyClass  #-}
-{-# LANGUAGE DeriveGeneric   #-}
-{-# LANGUAGE LambdaCase      #-}
-{-# LANGUAGE NamedFieldPuns  #-}
-{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TupleSections   #-}
-{-# LANGUAGE TypeOperators   #-}
+{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE ViewPatterns      #-}
 module Debug
-  ( Observable(..)
-  , observe
-  , debugRun
-  , getDebugTrace
-  , HoedOptions(..)
-  , defaultHoedOptions
-  , debug
+  (
+    debug
   , debug'
   , Config(..)
+  , debugRun
+  , getDebugTrace
+    -- * Reexported from Hoed
+  , Observable(..)
+  , observe
+  , HoedOptions(..)
+  , defaultHoedOptions
+    -- * Reexported from debug
   , debugViewTrace
   , debugJSONTrace
   , debugPrintTrace
@@ -106,6 +109,7 @@ data HoedCallDetails = HoedCallDetails
   , depends, parents :: ![HoedCallKey]
   } deriving (Eq, Generic, Hashable)
 
+-- XXX Remove these orphan instances when a version of Hoed with them is released
 instance Hashable Vertex where
   hashWithSalt s RootVertex    = s `hashWithSalt` (-1 :: Int)
   hashWithSalt s (Vertex cs _) = s `hashWithSalt` cs
@@ -224,13 +228,16 @@ snub = map head . group . sort
 -- Template Haskell
 
 data Config = Config
-  { generateGenericInstances, generateObservableInstances :: Bool
-  , excludeFromInstanceGeneration                         :: [String]
+  { generateGenericInstances      :: Bool      -- ^ Insert @deriving stock Generic@ on type declarations that don't already derive 'Generic'. Requires @DeriveGeneric@ and @DerivingStrategies@.
+  , generateObservableInstances   :: Bool      -- ^ Insert @deriving anyclass Observable@ on type declarations that don't already derive 'Observable'. Requires @DeriveAnyClass@ and @DerivingStrategies@.
+  , excludeFromInstanceGeneration :: [String]  -- ^ Exclude types from instance generation by name (unqualified).
   }
 
+-- | A @TemplateHaskell@ wrapper to convert normal functions into traced functions.
 debug = debug' (Config False False [])
 
--- | A @TemplateHaskell@ wrapper to convert normal functions into traced functions.
+-- | A @TemplateHaskell@ wrapper to convert normal functions into traced functions
+--   and optionally insert 'Observable' and 'Generic' instances.
 debug' :: Config -> Q [Dec] -> Q [Dec]
 debug' Config{..} q = do
   missing <-
