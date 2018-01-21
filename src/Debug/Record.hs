@@ -60,7 +60,6 @@ import Web.Browser
 import Paths_debug
 --import Data.Text.Prettyprint.Doc.Render.Text
 import Text.PrettyPrint.ANSI.Leijen as PP hiding ((<$>), (<>))
-import Text.Read
 
 
 -- | Metadata about a function, used to drive the HTML view.
