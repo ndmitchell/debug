@@ -279,6 +279,17 @@ debug' Config{..} q = do
         -- HACK We embed the source code of the function in the label,
         --      which is then unpacked by 'convert'
       createLabel n dec = nameBase n ++ "\n" ++ prettyPrint dec
+      updateDerivs derivs
+        | hasGenericInstance <- not $ null $ filterDerivingClausesByName ''Generic derivs
+        = [ DerivClause (Just StockStrategy)    [ConT ''Generic]
+          | not hasGenericInstance
+          , generateGenericInstances
+          ] ++
+          [ DerivClause (Just AnyclassStrategy) [ConT ''Observable]
+          | [] == filterDerivingClausesByName ''Observable derivs
+          , hasGenericInstance || generateGenericInstances
+          ] ++
+          derivs
   fmap concat $
     forM decs $ \dec ->
       case dec of
@@ -305,33 +316,11 @@ debug' Config{..} q = do
             ty'' <- renameForallTyVars ty'
             return [SigD n ty', SigD n' ty'']
         DataD cxt1 name tt k cons derivs
-          | generateGenericInstances
-          , not $ Set.member (prettyPrint name) excludedSet
-          , [] <- filterDerivingClausesByName ''Generic derivs
-          , derivGen <- DerivClause (Just StockStrategy) [ConT ''Generic]
-          , derivObs <- DerivClause (Just AnyclassStrategy) [ConT ''Observable]
-          -> return [DataD cxt1 name tt k cons (derivGen : derivObs : derivs)]
-        DataD cxt1 name tt k cons derivs
-          | generateObservableInstances
-          , not $ Set.member (prettyPrint name) excludedSet
-          , _:_ <- filterDerivingClausesByName ''Generic derivs
-          , []  <- filterDerivingClausesByName ''Observable derivs
-          , derivObs <- DerivClause (Just AnyclassStrategy) [ConT ''Observable]
-          -> return [DataD cxt1 name tt k cons (derivObs : derivs)]
+          | not $ Set.member (prettyPrint name) excludedSet
+          -> return [DataD cxt1 name tt k cons $ updateDerivs derivs]
         NewtypeD cxt1 name tt k cons derivs
-          | generateGenericInstances
-          , not $ Set.member (prettyPrint name) excludedSet
-          , [] <- filterDerivingClausesByName ''Generic derivs
-          , derivGen <- DerivClause (Just StockStrategy) [ConT ''Generic]
-          , derivObs <- DerivClause (Just AnyclassStrategy) [ConT ''Observable]
-          -> return [NewtypeD cxt1 name tt k cons (derivGen : derivObs : derivs)]
-        NewtypeD cxt1 name tt k cons derivs
-          | generateObservableInstances
-          , not $ Set.member (prettyPrint name) excludedSet
-          , _:_ <- filterDerivingClausesByName ''Generic derivs
-          , []  <- filterDerivingClausesByName ''Observable derivs
-          , derivObs <- DerivClause (Just AnyclassStrategy) [ConT ''Observable]
-          -> return [NewtypeD cxt1 name tt k cons (derivObs : derivs)]
+          | not $ Set.member (prettyPrint name) excludedSet
+          -> return [NewtypeD cxt1 name tt k cons $ updateDerivs derivs]
         _ -> return [dec]
 
 filterDerivingClausesByName n' derivs = [ it | it@(DerivClause _ preds) <- derivs , ConT n <- preds , n == n']
