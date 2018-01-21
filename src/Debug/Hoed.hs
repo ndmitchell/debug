@@ -11,7 +11,7 @@
 {-# LANGUAGE TupleSections     #-}
 {-# LANGUAGE TypeOperators     #-}
 {-# LANGUAGE ViewPatterns      #-}
--- | An alternative backend for lazy debugging with call stacks built on top of the Hoed package.
+-- | An alternative backend for lazy debugging with call stacks built on top of the "Hoed" package.
 --
 --   Instrumentation is done via a TH wrapper, which requires the following extensions:
 --
@@ -74,26 +74,20 @@ import           Data.Hashable
 import qualified Data.HashMap.Monoidal       as HM
 import qualified Data.HashMap.Strict         as HMS
 import qualified Data.Map.Strict             as Map
-import           Data.HashSet                (HashSet)
 import qualified Data.HashSet                as Set
 import           Data.List
-import           Data.List.Extra
 import           Data.Maybe
 import           Data.Monoid
-import           Data.Text                   (Text, pack, unpack)
+import           Data.Text                   (Text, pack)
 import qualified Data.Text                   as T
 import "Hoed"    Debug.Hoed                  hiding (runO)
-import           Debug.Hoed.CompTree
 import           Debug.Hoed.Render
 import           Debug.Record                as D (CallData (..),
                                                    DebugTrace (..),
                                                    Function (..),
-                                                   debugJSONTrace,
-                                                   debugPrintTrace,
-                                                   debugSaveTrace,
-                                                   debugViewTrace)
+                                                   debugViewTrace
+                                                   )
 import           GHC.Exts                    (IsList (..))
-import           GHC.Generics
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
 import           System.Clock
@@ -363,6 +357,7 @@ filterDerivingClausesByName n' derivs = [ it | it@(DerivClause _ preds) <- deriv
 mkDebugName n@(c:_)
   | isAlpha c || c == '_' = n ++ "_debug"
   | otherwise = n ++ "??"
+mkDebugName [] = error "unreachable: impossible"
 
 adjustInnerSigD (SigD n ty) = SigD n (adjustTy ty)
 adjustInnerSigD other       = other

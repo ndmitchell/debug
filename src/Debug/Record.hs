@@ -58,9 +58,7 @@ import Text.Show.Functions() -- Make sure the Show for functions instance exists
 import qualified Language.Javascript.JQuery as JQuery
 import Web.Browser
 import Paths_debug
---import Data.Text.Prettyprint.Doc.Render.Text
 import Text.PrettyPrint.ANSI.Leijen as PP hiding ((<$>), (<>))
-import Text.Read
 
 
 -- | Metadata about a function, used to drive the HTML view.
