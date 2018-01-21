@@ -10,7 +10,9 @@
 {-# LANGUAGE TupleSections     #-}
 {-# LANGUAGE TypeOperators     #-}
 {-# LANGUAGE ViewPatterns      #-}
-module Debug
+-- | An alternative backend for lazy debugging with call stacks.
+--   Built on top of the Hoed package.
+module Debug.Hoed
   (
     debug
   , debug'
