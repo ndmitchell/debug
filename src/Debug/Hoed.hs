@@ -11,25 +11,57 @@
 {-# LANGUAGE TupleSections     #-}
 {-# LANGUAGE TypeOperators     #-}
 {-# LANGUAGE ViewPatterns      #-}
--- | An alternative backend for lazy debugging with call stacks.
---   Built on top of the Hoed package.
+-- | An alternative backend for lazy debugging with call stacks built on top of the Hoed package.
+--
+--   Instrumentation is done via a TH wrapper, which requires the following extensions:
+--
+--  - 'TemplateHaskell'
+--  - 'PartialTypeSignatures'
+--  - 'ViewPatterns'
+--  - 'ExtendedDefaultRules'
+--  - 'FlexibleContexts'
+--
+--   Moreover, 'Observable' instances are needed for value inspection. The 'debug'' template haskell wrapper can automatically insert these for 'Generic' types.
+--
+-- > {-# LANGUAGE TemplateHaskell, ViewPatterns, PartialTypeSignatures, ExtendedDefaultRules #-}
+-- > {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
+-- > module QuickSort(quicksort) where
+-- > import Data.List
+-- > import Debug.Hoed
+-- >
+-- > debug [d|
+-- >    quicksort :: Ord a => [a] -> [a]
+-- >    quicksort [] = []
+-- >    quicksort (x:xs) = quicksort lt ++ [x] ++ quicksort gt
+-- >        where (lt, gt) = partition (<= x) xs
+-- >    |]
+--
+-- Now we can debug our expression under 'debugRun':
+--
+-- > $ ghci examples/QuickSortHoed.hs
+-- > GHCi, version 8.2.1: http://www.haskell.org/ghc/  :? for help
+-- > [1 of 1] Compiling QuickSortHoed    ( QuickSortHoed.hs, interpreted )
+-- > Ok, 1 module loaded.
+-- > *QuickSort> debugRun $ quicksort "haskell"
+-- > "aehklls"
+--
+-- After our expression is evaluated a web browser is started displaying the recorded
+-- information.
+--
+-- To debug an entire program, wrap the 'main' function below 'debugRun'.
 module Debug.Hoed
   (
     debug
   , debug'
   , Config(..)
   , debugRun
+    -- * Generate a trace
   , getDebugTrace
     -- * Reexported from Hoed
   , Observable(..)
   , observe
   , HoedOptions(..)
   , defaultHoedOptions
-    -- * Reexported from debug
-  , debugViewTrace
-  , debugJSONTrace
-  , debugPrintTrace
-  , debugSaveTrace
   ) where
 
 import           Control.Monad
