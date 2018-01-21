@@ -34,12 +34,17 @@ library
     build-depends:
         base == 4.*,
         bytestring,
+        clock,
+        containers,
         aeson,
         ghc-prim,
+        Hoed >= 0.4.1,
+        libgraph >= 1.14,
         extra,
         deepseq,
         directory,
         hashable,
+        monoidal-containers,
         template-haskell,
         open-browser,
         text,
@@ -52,6 +57,7 @@ library
 
     exposed-modules:
         Debug
+        Debug.Hoed
         Debug.Record
         Debug.Util
 

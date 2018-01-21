@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports    #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TupleSections     #-}
@@ -49,7 +50,7 @@ import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                   (Text, pack, unpack)
 import qualified Data.Text                   as T
-import           Debug.Hoed                  hiding (runO)
+import "Hoed"    Debug.Hoed                  hiding (runO)
 import           Debug.Hoed.CompTree
 import           Debug.Hoed.Render
 import           Debug.Record                as D (CallData (..),
