@@ -201,7 +201,7 @@ instance {-# OVERLAPS #-} Show a where
 #endif
 
 {-# NOINLINE fun #-}
--- | Called under a lambda with a function name to provide a unique conpretty for
+-- | Called under a lambda with a function name to provide a unique context for
 --   a particular call, e.g.:
 --
 -- > tracedAdd x y = fun "add" $ \t -> var t "x" x + var t "y" y
