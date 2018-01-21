@@ -11,6 +11,7 @@ Description
 `debug-pp` is a Haskell source preprocessor that performs the steps a programmer would need to follow in order to debug a module with the [`debug`](http://hackage.haskell.org/package/debug) package. That is:
 * append an import for the `Debug` module, and 
 * wrap the body in a `debug` splice using a TH declaration quasiquote. 
+* Add the required GHC extensions.
 
 Usage
 --------
@@ -33,7 +34,7 @@ ghc-options: -F -pgmF debug-pp
 ```
 
 In both cases you will also need to modify your Cabal descriptor in order to:
-* add a dependency on the `debug` package, and
+* add a dependency on either the `debug` package or the `debug-hoed` package, and
 * add a build tool depends on `debug-pp` (required Cabal 2.0) :
 ```
 Library
@@ -72,8 +73,8 @@ The configuration options include:
 Motivation
 -------------
 
-* Debugging individual functions is often impractical due to the declaration groups [restriction](http://ghc.readthedocs.io/en/8.0.1/glasgow_exts.html#ghc-flag--XTemplateHaskellQuotes) of Template Haskell. Therefore, it's often easier to debug an entire module.
+Debugging individual functions is often impractical due to the declaration groups [restriction](http://ghc.readthedocs.io/en/8.0.1/glasgow_exts.html#ghc-flag--XTemplateHaskellQuotes) of Template Haskell. Therefore, it's often easier to debug an entire module.
 
-* However, error messages are much worse for TH quoted code. Errors like `Not in scope: data constructor Foo in line X` become `Not in scope: Foo, in the TH quotation ENTIRE MODULE HERE`. 
+However, error messages are much worse for TH quoted code. Errors like `Not in scope: data constructor Foo in line X` become `Not in scope: Foo, in the TH quotation ENTIRE MODULE HERE`. 
 
-* Personally, quoting/unquoting the module by hand is annoying. Having a preprocessor do this for me is convenient, and can be easily tied to a Cabal flag or a stack command line arg.
+Personally, quoting/unquoting the module by hand is annoying. Having a preprocessor do this for me is convenient, and can be easily tied to a Cabal flag or a stack command line arg.
