@@ -80,7 +80,7 @@ import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                   (Text, pack)
 import qualified Data.Text                   as T
-import "Hoed"    Debug.Hoed                  hiding (runO)
+import "Hoed"    Debug.Hoed
 import           Debug.Hoed.Render
 import           Debug.Record                as D (CallData (..),
                                                    DebugTrace (..),
