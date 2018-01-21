@@ -53,7 +53,7 @@ function showCall(i)
     }
     variables = variables.sort();
     for (var i = 0; i < variables.length; i++)
-        $("#function-variables").append($("<li>" + escapeHTML(variables[i]) + "</li>"));
+        $("#function-variables").append($("<li><pre>" + escapeHTML(variables[i]) + "</pre></li>"));
 }
 
 function showCallStack(me)
