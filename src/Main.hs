@@ -7,7 +7,7 @@
 module Main (main) where
 
 import Control.Monad
-import Data.Aeson
+import Data.Aeson.Types
 import Data.Char
 import Data.List
 import Data.Maybe
