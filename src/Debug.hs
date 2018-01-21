@@ -117,14 +117,16 @@ appsFromExp tag e@(AppE e1 e2) = do
     adjustApp tag (AppE newE1 newE2)
 appsFromExp tag e@(LetE decs exp) = do
     newDecs <- traverse (appsFromDec tag) decs
-    newExp <- appsFromExp tag exp
-    return $ LetE newDecs newExp
+    LetE newDecs <$> appsFromExp tag exp
 appsFromExp tag e@(InfixE e1May e2 e3May) = do
     newE1 <- appsFromExpMay tag e1May
     newE2 <- appsFromExp tag e2
     newE3 <- appsFromExpMay tag e3May
-    adjustedE2 <- adjustApp tag (InfixE newE1 newE2 newE3)
-    return $ InfixE newE1 adjustedE2 newE3
+    adjustApp tag (InfixE newE1 newE2 newE3)
+appsFromExp tag e@(CaseE exp matches) = do
+    newExp <- appsFromExp tag exp
+    newMatches <- traverse (appsFromMatch tag) matches
+    return $ CaseE newExp newMatches
 appsFromExp tag e = return e
 
 appsFromExpMay :: Name -> Maybe Exp -> Q (Maybe Exp)
@@ -138,6 +140,12 @@ appsFromDec tag d@(ValD pat body dec) = do
 appsFromDec tag d@(FunD name subClauses) = return d
 appsFromDec _ d = return d
 
+appsFromMatch :: Name -> Match -> Q Match
+appsFromMatch tag (Match pat body decs) = do
+    newBody <- appsFromBody tag body
+    newDecs <- traverse (appsFromDec tag) decs
+    return $ Match pat newBody newDecs
+
 adjustApp :: Name -> Exp -> Q Exp
 adjustApp tag (AppE e1 e2) = do
     let displayName = expDisplayName e1
@@ -146,24 +154,29 @@ adjustApp tag (AppE e1 e2) = do
     let result = LetE [ValD viewP (NormalB (AppE e1 e2)) []] (VarE e1n)
     return result
 adjustApp tag e@(InfixE e1May e2 e3May) = do
-    let displayName = infixExpDisplayName e2
-    e2n <- newName displayName
-    let viewP = ViewP (VarE 'var `AppE` VarE tag `AppE` LitE (StringL displayName)) (VarP e2n)
-    let _result = LetE [ValD viewP (NormalB (InfixE e1May e2 e3May)) []] (VarE e2n)
-    return e2 -- when fixed, ---> return _result
+    let displayName = infixExpDisplayName e2 -- infix symbol, e.g "++"
+    if displayName == "$" --don't record $ as a function application
+        then return e
+        else do
+            let legalInfixVar = mkLegalInfixVar displayName -- infix name as valid variable, e.g. "plus_plus"
+            e2Var <- newName legalInfixVar
+            let viewP = ViewP (VarE 'var `AppE` VarE tag `AppE` LitE (StringL displayName)) (VarP e2Var)
+            return $ LetE [ValD viewP (NormalB (InfixE e1May e2 e3May)) []] (VarE e2Var)
+adjustApp _ e@(UInfixE e1 e2 e3) = return e   --TODO: These might need to be processed
 adjustApp _ e = return e
 
 -- Find the (unqualified) function name to use as the UI display name
 expDisplayName :: Exp -> String
 expDisplayName e =
     let name = removeLet $ (show . ppr) e
-    in '_' : removeExtraDigits (takeWhileEnd (/= '.') ((head . words) name))
+    in removeExtraDigits (takeWhileEnd (/= '.') ((head . words) name))
 
 -- Same as expDisplayName but for infix functions
 infixExpDisplayName :: Exp -> String
 infixExpDisplayName e =
     let name = removeLet $ (show . ppr) e
-    in "_(" ++ removeExtraDigits (takeWhileEnd (/= '.') ((head . words) name))
+        name' = removeExtraDigits (takeWhileEnd (/= '.') ((head . words) name))
+    in fromMaybe name' $ stripSuffix ")" name'
 
 prettyPrint = pprint . transformBi f
     where f (Name x _) = Name x NameS -- avoid nasty qualifications

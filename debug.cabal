@@ -35,6 +35,7 @@ library
         base == 4.*,
         bytestring,
         aeson,
+        containers,
         ghc-prim,
         extra,
         directory,
