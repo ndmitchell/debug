@@ -304,10 +304,12 @@ instance ToJSON CallData where
   toJSON CallData {..} =
     object $
     "" .= callFunctionId :
-    ["$depends" .= toJSON callDepends | not(null callDepends)] ++
-    ["$parents" .= toJSON callParents | not(null callParents)] ++
+    ["$depends" .= toJSON callDepends | not (null callDepends)] ++
+    ["$parents" .= toJSON callParents | not (null callParents)] ++
     map (uncurry (.=)) callVals
-  toEncoding CallData{..} = pairs ("" .= callFunctionId <> depends <> parents)
+  toEncoding CallData {..} =
+    pairs
+      ("" .= callFunctionId <> depends <> parents <> foldMap (uncurry (.=)) callVals)
     where
       depends
         | null callDepends = mempty
