@@ -15,7 +15,7 @@ description:
     Full usage instructions are at "Debug".
 homepage:           https://github.com/ndmitchell/debug
 bug-reports:        https://github.com/ndmitchell/debug/issues
-tested-with:        GHC==8.2.1, GHC==8.0.2
+tested-with:        GHC==8.2.2, GHC==8.0.2
 extra-doc-files:
     CHANGES.txt
     README.md
@@ -35,8 +35,10 @@ library
         base == 4.*,
         bytestring,
         aeson,
+        containers,
         ghc-prim,
         extra,
+        deepseq,
         directory,
         hashable,
         template-haskell,
@@ -45,7 +47,8 @@ library
         uniplate,
         unordered-containers,
         js-jquery,
-        ansi-wl-pprint,
+        prettyprinter,
+        prettyprinter-compat-ansi-wl-pprint,
         vector
 
     exposed-modules:

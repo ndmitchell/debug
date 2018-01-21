@@ -3,8 +3,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-} -- Dodgy Show instance, useful for debugging
+{-# OPTIONS_GHC -Wno-deprecations #-} -- Dodgy Show instance, useful for debugging
 
 -- | Module for recording and manipulating debug traces. For most users, the
 --   @TemplateHaskell@ helpers in "Debug" should be sufficient.
@@ -14,6 +16,7 @@ module Debug.Record(
     Call,
     funInfo, fun, var,
     debugClear,
+    debugRun,
     -- * Viewing
     debugPrint, debugPrintTrace,
     debugJSON, debugJSONTrace,
@@ -26,6 +29,7 @@ module Debug.Record(
     ) where
 
 import Debug.Variables
+import Control.DeepSeq
 import Control.Exception
 import Control.Monad
 import Data.Aeson
@@ -37,6 +41,8 @@ import Data.IORef
 import Data.List.Extra
 import Data.Maybe
 import Data.Monoid
+import Data.Text (Text)
+import Data.Text.Read as T
 import Data.Tuple.Extra
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.HashMap.Strict as HM
@@ -52,23 +58,25 @@ import Text.Show.Functions() -- Make sure the Show for functions instance exists
 import qualified Language.Javascript.JQuery as JQuery
 import Web.Browser
 import Paths_debug
+--import Data.Text.Prettyprint.Doc.Render.Text
 import Text.PrettyPrint.ANSI.Leijen as PP hiding ((<$>), (<>))
 import Text.Read
 
 
 -- | Metadata about a function, used to drive the HTML view.
 data Function = Function
-    {funName :: String -- ^ Function name
-    ,funSource :: String -- ^ Function source, using @\n@ to break lines
-    ,funArguments :: [String] -- ^ Variables for the arguments to the function
-    ,funResult :: String -- ^ Variable for the result of the function
+    {funName :: Text -- ^ Function name
+    ,funSource :: Text -- ^ Function source, using @\n@ to break lines
+    ,funArguments :: [Text] -- ^ Variables for the arguments to the function
+    ,funResult :: Text -- ^ Variable for the result of the function
     }
     deriving (Eq,Generic,Ord,Show)
 
 instance Hashable Function
+instance NFData Function
 
 -- | A single function call, used to attach additional information
-data Call = Call Function (IORef [(String, Var)])
+data Call = Call Function (IORef [(Text, Var)])
 
 {-# NOINLINE refVariables #-}
 refVariables :: IORef Variables
@@ -90,6 +98,14 @@ debugClear = do
 debugPrint :: IO ()
 debugPrint = getDebugTrace >>= debugPrintTrace
 
+-- | Run a computation and open a browser window showing observed function calls.
+--
+--   @ main = debugRun $ do
+--       ...
+--   @
+debugRun :: IO a -> IO a
+debugRun = bracket_ debugClear debugView
+
 -- | Print information about the observed function calls to 'stdout',
 --   in a human-readable format.
 debugPrintTrace :: DebugTrace -> IO ()
@@ -101,40 +117,40 @@ debugPrintTrace DebugTrace{..} = do
         docs = map call $ nubOrd $ reverse concs
     putDoc (vcat docs <> hardline)
     where
-          call :: (Function, [(String, String)]) -> Doc
+          call :: (Function, [(Text, Text)]) -> Doc
           call (f, vs) =
                    let ass = vs
                        hdr = bold $ header ass f
                    in hang 5 $ hdr <$$> body ass
 
 
-          header :: [(String, String)] -> Function -> Doc
-          header ass f = text "\n*"       <+>
-                         text (funName f) <+>
+          header :: [(Text, Text)] -> Function -> Doc
+          header ass f = "\n*"       <+>
+                         pretty (funName f) <+>
                          arguments ass    <+>
-                         text "="         <+>
+                         "="         <+>
                          result ass
 
-          arguments :: [(String, String)] -> Doc
+          arguments :: [(Text, Text)] -> Doc
           arguments ass =
                 let vals = map snd
                          $ sortOn fst
                          $ mapMaybe (\(t, v) -> (,v) <$> getArgIndex t)
                            ass
-                in hsep (map text vals)
+                in hsep (map pretty vals)
 
-          result :: [(String, String)] -> Doc
-          result = text . fromMaybe "no result!" . lookup "$result"
+          result :: [(Text, Text)] -> Doc
+          result = pretty . fromMaybe "no result!" . lookup "$result"
 
-          body :: [(String, String)] -> Doc
+          body :: [(Text, Text)] -> Doc
           body svs = vsep $ map bodyLine svs
 
-          bodyLine :: (String, String) -> Doc
-          bodyLine (t, v) = text t <+> text "=" <+> text v
+          bodyLine :: (Text, Text) -> Doc
+          bodyLine (t, v) = pretty t <+> "=" <+> pretty v
 
           -- getArgIndex $arg19 = Just 19
-          getArgIndex :: String -> Maybe Int
-          getArgIndex ('$':'a':'r':'g':rest) = readMaybe(takeWhile isDigit rest)
+          getArgIndex :: Text -> Maybe Int
+          getArgIndex (T.stripPrefix "$arg" -> Just rest) = case T.decimal(T.takeWhile isDigit rest) of Left e -> Nothing ; Right(i,rest) -> Just i
           getArgIndex _ = Nothing
 
 -- | Save information about observed functions to the specified file, in HTML format.
@@ -193,7 +209,7 @@ instance {-# OVERLAPS #-} Show a where
 --   This function involves giving identity to function calls, so is unsafe,
 --   and will only work under a lambda.
 fun :: Show a => String -> (Call -> a) -> a
-fun name = funInfo $ Function name [] [] []
+fun name = funInfo $ Function (T.pack name) "" [] ""
 
 -- | A version of 'fun' allowing you to pass further information about the
 --   'Function' which is used when showing debug views.
@@ -210,7 +226,7 @@ funInfo info f = unsafePerformIO $ do
 var :: Show a => Call -> String -> a -> a
 var (Call _ ref) name val = unsafePerformIO $ do
     var <- atomicModifyIORef refVariables $ addVariable val
-    atomicModifyIORef ref $ \v -> ((name, var):v, ())
+    atomicModifyIORef ref $ \v -> ((T.pack name, var) :v, ())
     return val
 
 ---------------------------------
@@ -233,7 +249,7 @@ debugJSONTrace = encode
 -- | A flat encoding of debugging observations.
 data DebugTrace = DebugTrace
   { functions :: [Function]  -- ^ Flat list of all the functions traced
-  , variables :: [String]    -- ^ Flat list of all the variable values observed
+  , variables :: [Text]    -- ^ Flat list of all the variable values observed
   , calls     :: [CallData]  -- ^ Flat list of all the function calls traced
   }
   deriving (Eq, Generic, Show)
@@ -254,19 +270,23 @@ getDebugTrace = do
           callDepends = [] -- available in the Hoed backend but not in this one
           callParents = [] -- available in the Hoed backend but not in this one
       return CallData{..}
-  return $ DebugTrace infos vars callEntries
+  return $ DebugTrace infos (map T.pack vars) callEntries
 
 instance FromJSON DebugTrace
-instance ToJSON DebugTrace
+instance ToJSON DebugTrace where
+  toEncoding = genericToEncoding defaultOptions
+instance NFData DebugTrace
 
 -- | A flat encoding of an observed call.
 data CallData = CallData
   { callFunctionId :: Int       -- ^ An index into the 'functions' table
-  , callVals :: [(String, Int)] -- ^ The value name tupled with an index into the 'variables' table
+  , callVals :: [(Text, Int)] -- ^ The value name tupled with an index into the 'variables' table
   , callDepends :: [Int]        -- ^ Indexes into the 'calls' table
   , callParents :: [Int]        -- ^ Indexes into the 'calls' table
   }
   deriving (Eq, Generic, Show)
+
+instance NFData CallData
 
 instance FromJSON CallData where
   parseJSON (Object v) =
@@ -274,7 +294,7 @@ instance FromJSON CallData where
     where
       vals =
         sequence
-          [ (T.unpack k, ) <$> parseJSON x
+          [ (k, ) <$> parseJSON x
           | (k, x) <- HM.toList v
           , not(T.null k)
           , k /= "$depends"
@@ -288,7 +308,15 @@ instance ToJSON CallData where
     "" .= callFunctionId :
     ["$depends" .= toJSON callDepends | not(null callDepends)] ++
     ["$parents" .= toJSON callParents | not(null callParents)] ++
-    map (uncurry (.=) . first T.pack) callVals
+    map (uncurry (.=)) callVals
+  toEncoding CallData{..} = pairs ("" .= callFunctionId <> depends <> parents)
+    where
+      depends
+        | null callDepends = mempty
+        | otherwise = "$depends" .= callDepends
+      parents
+        | null callParents = mempty
+        | otherwise = "$parents" .= callParents
 
 functionJsonOptions = defaultOptions{fieldLabelModifier = f}
     where
@@ -300,3 +328,4 @@ instance FromJSON Function where
 
 instance ToJSON Function where
     toJSON = genericToJSON functionJsonOptions
+    toEncoding = genericToEncoding functionJsonOptions

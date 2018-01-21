@@ -80,7 +80,7 @@ For practical alternatives for debugging Haskell programs you may wish to consid
 * [Hood](https://hackage.haskell.org/package/hood) and [Hoed](https://hackage.haskell.org/package/Hoed), a value-based observational debugger with a difficult user interface, deals well with laziness.
 * [Hat](https://hackage.haskell.org/package/hat), good ideas, but I've never got it working.
 
-Compared to the above, `debug` stresses simplicitly of integration and user experience.
+Compared to the above, `debug` stresses simplicity of integration and user experience.
 
 ## FAQ
 

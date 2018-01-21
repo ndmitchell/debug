@@ -45,7 +45,7 @@
 --   @TemplateHaskell@) see "Debug.Record".
 module Debug(
     -- * Generate trace
-    debug,
+    debug, debugRun,
     -- * View a trace
     debugView, debugSave, debugPrint,
     -- * Clear a trace
@@ -56,6 +56,7 @@ import Control.Monad.Extra
 import Data.Generics.Uniplate.Data
 import Data.List.Extra
 import Data.Maybe
+import Data.Text (pack)
 import Debug.Record
 import Debug.Util
 import Language.Haskell.TH
@@ -77,21 +78,26 @@ debug q = do
 
 adjustDec :: (Name -> Maybe Dec) -> Dec -> Q Dec
 -- try and shove in a "_ =>" if we can, to capture necessary Show instances
-adjustDec askSig x@(SigD name (ForallT vars ctxt typ)) = return $
+adjustDec askSig x@(SigD name ty@(ForallT vars ctxt typ))
+  | hasRankNTypes ty = return x
+  | otherwise = return $
     SigD name $ ForallT vars (delete WildCardT ctxt ++ [WildCardT]) typ
 adjustDec askSig (SigD name typ) = adjustDec askSig $ SigD name $ ForallT [] [] typ
-adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_)) = do
+adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_))
+  | Just (SigD _ ty) <- askSig name
+  , hasRankNTypes ty = return o
+  | otherwise = do
     inner <- newName "inner"
     tag <- newName "tag"
     args <- sequence [newName $ "arg" ++ show i | i <- [1 .. length arity]]
     let addTag (Clause ps bod inner) = Clause (VarP tag:ps) bod inner
-    let clauses2 = map addTag $ transformBi (adjustPat tag) clauses
+    let clauses2 = map addTag $ transformBi (adjustValD tag) clauses
     let args2 = [VarE 'var `AppE` VarE tag `AppE` toLitPre "$" a `AppE` VarE a | a <- args]
     let info = ConE 'Function `AppE`
-            toLit name `AppE`
-            LitE (StringL $ prettyPrint $ maybeToList (askSig name) ++ [o]) `AppE`
-            ListE (map (toLitPre "$") args) `AppE`
-            LitE (StringL "$result")
+            packLit (toLit name) `AppE`
+            packLit (LitE (StringL $ prettyPrint $ maybeToList (askSig name) ++ [o])) `AppE`
+            ListE (map (packLit . toLitPre "$") args) `AppE`
+            packLit (LitE (StringL "$result"))
     let body2 = VarE 'var `AppE` VarE tag `AppE` LitE (StringL "$result") `AppE` foldl AppE (VarE inner) (VarE tag : args2)
     let body = VarE 'funInfo `AppE` info `AppE` LamE [VarP tag] body2
     afterApps <- transformApps tag clauses2
@@ -99,7 +105,7 @@ adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_)) = do
 adjustDec askSig x = return x
 
 transformApps :: Name -> [Clause] -> Q [Clause]
-transformApps tag clauses = mapM (appsFromClause tag) clauses
+transformApps tag = mapM (appsFromClause tag)
 
 appsFromClause :: Name -> Clause -> Q Clause
 appsFromClause tag cl@(Clause pats body decs) = do
@@ -117,14 +123,16 @@ appsFromExp tag e@(AppE e1 e2) = do
     adjustApp tag (AppE newE1 newE2)
 appsFromExp tag e@(LetE decs exp) = do
     newDecs <- traverse (appsFromDec tag) decs
-    newExp <- appsFromExp tag exp
-    return $ LetE newDecs newExp
+    LetE newDecs <$> appsFromExp tag exp
 appsFromExp tag e@(InfixE e1May e2 e3May) = do
     newE1 <- appsFromExpMay tag e1May
     newE2 <- appsFromExp tag e2
     newE3 <- appsFromExpMay tag e3May
-    adjustedE2 <- adjustApp tag (InfixE newE1 newE2 newE3)
-    return $ InfixE newE1 adjustedE2 newE3
+    adjustApp tag (InfixE newE1 newE2 newE3)
+appsFromExp tag e@(CaseE exp matches) = do
+    newExp <- appsFromExp tag exp
+    newMatches <- traverse (appsFromMatch tag) matches
+    return $ CaseE newExp newMatches
 appsFromExp tag e = return e
 
 appsFromExpMay :: Name -> Maybe Exp -> Q (Maybe Exp)
@@ -138,6 +146,12 @@ appsFromDec tag d@(ValD pat body dec) = do
 appsFromDec tag d@(FunD name subClauses) = return d
 appsFromDec _ d = return d
 
+appsFromMatch :: Name -> Match -> Q Match
+appsFromMatch tag (Match pat body decs) = do
+    newBody <- appsFromBody tag body
+    newDecs <- traverse (appsFromDec tag) decs
+    return $ Match pat newBody newDecs
+
 adjustApp :: Name -> Exp -> Q Exp
 adjustApp tag (AppE e1 e2) = do
     let displayName = expDisplayName e1
@@ -146,27 +160,35 @@ adjustApp tag (AppE e1 e2) = do
     let result = LetE [ValD viewP (NormalB (AppE e1 e2)) []] (VarE e1n)
     return result
 adjustApp tag e@(InfixE e1May e2 e3May) = do
-    let displayName = infixExpDisplayName e2
-    e2n <- newName displayName
-    let viewP = ViewP (VarE 'var `AppE` VarE tag `AppE` LitE (StringL displayName)) (VarP e2n)
-    let _result = LetE [ValD viewP (NormalB (InfixE e1May e2 e3May)) []] (VarE e2n)
-    return e2 -- when fixed, ---> return _result
+    let displayName = infixExpDisplayName e2 -- infix symbol, e.g "++"
+    if displayName == "$" --don't record $ as a function application
+        then return e
+        else do
+            let legalInfixVar = mkLegalInfixVar displayName -- infix name as valid variable, e.g. "plus_plus"
+            e2Var <- newName legalInfixVar
+            let viewP = ViewP (VarE 'var `AppE` VarE tag `AppE` LitE (StringL displayName)) (VarP e2Var)
+            return $ LetE [ValD viewP (NormalB (InfixE e1May e2 e3May)) []] (VarE e2Var)
+adjustApp _ e@(UInfixE e1 e2 e3) = return e   --TODO: These might need to be processed
 adjustApp _ e = return e
 
 -- Find the (unqualified) function name to use as the UI display name
 expDisplayName :: Exp -> String
 expDisplayName e =
     let name = removeLet $ (show . ppr) e
-    in '_' : removeExtraDigits (takeWhileEnd (/= '.') ((head . words) name))
+    in removeExtraDigits (takeWhileEnd (/= '.') ((head . words) name))
 
 -- Same as expDisplayName but for infix functions
 infixExpDisplayName :: Exp -> String
 infixExpDisplayName e =
     let name = removeLet $ (show . ppr) e
-    in "_(" ++ removeExtraDigits (takeWhileEnd (/= '.') ((head . words) name))
+        name' = removeExtraDigits (takeWhileEnd (/= '.') ((head . words) name))
+    in fromMaybe name' $ stripSuffix ")" name'
 
 prettyPrint = pprint . transformBi f
     where f (Name x _) = Name x NameS -- avoid nasty qualifications
+
+adjustValD tag decl@ValD{} = transformBi (adjustPat tag) decl
+adjustValD tag other       = other
 
 adjustPat :: Name -> Pat -> Pat
 adjustPat tag (VarP x) = ViewP (VarE 'var `AppE` VarE tag `AppE` toLit x) (VarP x)
@@ -174,3 +196,8 @@ adjustPat tag x = x
 
 toLit = toLitPre ""
 toLitPre pre (Name (OccName x) _) = LitE $ StringL $ pre ++ x
+packLit = AppE (VarE 'pack)
+
+hasRankNTypes (ForallT vars ctxt typ) = hasRankNTypes' typ
+hasRankNTypes typ = hasRankNTypes' typ
+hasRankNTypes' typ = not $ null [ () | ForallT{} <- universe typ]
