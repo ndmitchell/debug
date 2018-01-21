@@ -148,10 +148,10 @@ extractHoedCall hoedCompTree v@Vertex {vertexStmt = c@CompStmt {stmtDetails = St
   Just
     ( hashed $ HoedFunctionKey (stmtLabel) (length stmtLamArgs) (map fst clauses)
     , stmtIdentifier
-    , HoedCallDetails (map hashed stmtLamArgs) (map snd clauses) (hashed stmtLamRes) depends parents)
+    , HoedCallDetails stmtLamArgs (map snd clauses) stmtLamRes depends parents)
   where
     clauses =
-      [ (stmtLabel, hashed stmtCon)
+      [ (stmtLabel, stmtCon)
       | Vertex {vertexStmt = CompStmt {stmtLabel, stmtDetails = StmtCon {..}}} <-
           getSuccs hoedCompTree v
       ]
