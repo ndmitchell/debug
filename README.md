@@ -51,26 +51,40 @@ You can look play with the example results for various examples:
 * [`quicksortBy (<) "haskell"`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/quicksortBy.html), like `quicksort` but using a comparison function and including a trace of `partition` itself.
 * [`lcm_gcd 6 15`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/lcm_gcd.html), computing `lcm 6 15 ^^ gcd 6 15`.
 
-## Notes
+## Debug backends
 
-Calling the debugged function inside GHCi records the results for viewing inside the UI.
+The tool offers two alternative backends for generating the debug trace:
+
+* `import Debug` 
+
+   This is the default backend, which relies on `Show` instances to observe values strictly. If your program relies on laziness, it will probably crash or loop. 
+
+* `import Debug.Hoed` 
+
+   A new experimental backend built on top of [Hoed](https://github.com/MaartenFaddegon/Hoed/pulls). 
+   Fully lazy, able to observe function values and provide call stacks: [example](https://rawgit.com/pepeiborra/debug-hoed/master/example/quicksort.html). The instrumentation is simpler, so it is known to work in more cases. It relies on `Observable` instances  which are derivable (the TH wrapper can take care of this automatically). Note that it will probably not work in multi threaded environments yet.
+
+## Requirements
+
+- Polymorphic functions must have type signatures, otherwise GHC will fail to infer an unambiguous type when annotated for debugging.
+- Types under observation must have `Show` (or `Observable`) instances, otherwise they will fall back to the default `<?>`. 
+- Calling the debugged function inside GHCi records the results for viewing inside the UI.
 The function can be called multiple times with different parameters, and the results of each
 individual run can be selected inside the UI.
 
-You can create multiple `debug [d|...]` blocks inside a module and you can also put more than one
-function inside a single block.
+## Notes
+- You can create multiple `debug [d|...]` blocks inside a module and you can also put more than one
+function inside a single block. 
 
 A function being debugged can refer to another function also being debugged, but due to a limitation
 of Template Haskell, the definition of the function being called must occur above the point of its
 reference in the source module.
 
+Due to constant applicative forms (CAFs) distorting the debug trace, it is not advisable to run the debugger twice in the same GHCi session.
+
 ## Limitations
 
-This tool is quite new, so it has both limitations, places it is incomplete and bugs. Some notable issues:
-
-* It calls `show` on all the values in encounters, meaning they must all have a `Show` instance (it defines a global `Show` instance which should get used as a fallback), and they will be fully evaluated. If your program relies on laziness it probably won't work.
-* It doesn't really understand shadowed variables, so it will work, but the debug results will be lower quality.
-* For function values it won't give you a whole lot of information.
+This tool is quite new, so it has both limitations, places it is incomplete and bugs. Please report all the issues you find and help us make it better.
 
 ## Alternatives
 

@@ -58,9 +58,7 @@ import Text.Show.Functions() -- Make sure the Show for functions instance exists
 import qualified Language.Javascript.JQuery as JQuery
 import Web.Browser
 import Paths_debug
---import Data.Text.Prettyprint.Doc.Render.Text
 import Text.PrettyPrint.ANSI.Leijen as PP hiding ((<$>), (<>))
-import Text.Read
 
 
 -- | Metadata about a function, used to drive the HTML view.
@@ -306,10 +304,12 @@ instance ToJSON CallData where
   toJSON CallData {..} =
     object $
     "" .= callFunctionId :
-    ["$depends" .= toJSON callDepends | not(null callDepends)] ++
-    ["$parents" .= toJSON callParents | not(null callParents)] ++
+    ["$depends" .= toJSON callDepends | not (null callDepends)] ++
+    ["$parents" .= toJSON callParents | not (null callParents)] ++
     map (uncurry (.=)) callVals
-  toEncoding CallData{..} = pairs ("" .= callFunctionId <> depends <> parents)
+  toEncoding CallData {..} =
+    pairs
+      ("" .= callFunctionId <> depends <> parents <> foldMap (uncurry (.=)) callVals)
     where
       depends
         | null callDepends = mempty
