@@ -1,5 +1,0 @@
-resolver: lts-10.0
-extra-deps: []
-packages:
-  - .
-compiler-check: newer-minor
