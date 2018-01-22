@@ -24,6 +24,9 @@ data-files:
     html/debug.html
     html/debug.js
 
+extra-source-files:
+    test/ref/hoed.json
+
 source-repository head
     type:     git
     location: https://github.com/ndmitchell/debug.git
@@ -34,13 +37,18 @@ library
     build-depends:
         base == 4.*,
         bytestring,
+        clock,
+        containers,
         aeson,
         containers,
         ghc-prim,
+        Hoed >= 0.4.1,
+        libgraph >= 1.14,
         extra,
         deepseq,
         directory,
         hashable,
+        monoidal-containers,
         template-haskell,
         open-browser,
         text,
@@ -53,6 +61,7 @@ library
 
     exposed-modules:
         Debug
+        Debug.Hoed
         Debug.Record
         Debug.Util
 
@@ -72,3 +81,18 @@ test-suite debug-test
         extra,
         filepath,
         debug
+
+test-suite debug-hoed-test
+    default-language: Haskell2010
+    type: exitcode-stdio-1.0
+    main-is: Hoed.hs
+    hs-source-dirs: test
+    ghc-options:  -main-is Hoed
+    build-depends:
+        base == 4.*,
+        bytestring,
+        directory,
+        extra,
+        filepath,
+        debug,
+        process
