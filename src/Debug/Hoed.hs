@@ -11,6 +11,7 @@
 {-# LANGUAGE TupleSections     #-}
 {-# LANGUAGE TypeOperators     #-}
 {-# LANGUAGE ViewPatterns      #-}
+{-# OPTIONS -Wno-orphans       #-}
 -- | An alternative backend for lazy debugging with call stacks built on top of the "Hoed" package.
 --
 --   Instrumentation is done via a TH wrapper, which requires the following extensions:
