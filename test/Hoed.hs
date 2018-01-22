@@ -42,5 +42,5 @@ main = do
     trace <- getDebugTrace defaultHoedOptions $ putStrLn$ quicksort (<) "haskell"
     debugPrintTrace trace
     B.writeFile "hoed.json" $ debugJSONTrace trace
-    exitWith =<< system "diff hoed.json test/ref/hoed.json"
+    exitWith =<< system "stack exec diff hoed.json test/ref/hoed.json"
     debugSaveTrace "trace.html" trace
