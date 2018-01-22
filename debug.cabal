@@ -25,7 +25,7 @@ data-files:
     html/debug.js
 
 extra-source-files:
-    test/ref/*.json
+    test/ref/hoed.json
 
 source-repository head
     type:     git
