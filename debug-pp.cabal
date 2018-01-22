@@ -1,0 +1,41 @@
+-- This file has been generated from package.yaml by hpack version 0.20.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: b5193bb50ffd0c764165ca2a8cbbefb9213665f5b05de0638580dca6775ba457
+
+name:           debug-pp
+version:        0.1.1
+synopsis:       A preprocessor for the debug package
+description:    A preprocessor to automate the instrumentation of a module for the debug package
+category:       Debugging
+homepage:       https://github.com/pepeiborra/debug-hoed-pp#readme
+bug-reports:    https://github.com/pepeiborra/debug-pp/issues
+author:         Pepe Iborra
+maintainer:     pepeiborra@gmail.com
+copyright:      All Rights Reserved
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+cabal-version:  >= 1.10
+
+extra-source-files:
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/pepeiborra/debug-pp
+
+executable debug-pp
+  main-is: Main.hs
+  hs-source-dirs:
+      src
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , directory
+    , filepath
+    , yaml
+  other-modules:
+      Paths_debug_pp
+  default-language: Haskell2010
