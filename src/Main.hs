@@ -23,13 +23,15 @@ import Text.Printf
 
 usage :: String -> String
 usage progName = unlines [
-  "usage: " ++ progName ++
-  " [FILENAME] [SOURCE] [DEST]",
-  "Instrument Haskell module for debugging from SOURCE (derived from FILENAME) and write",
-  "standard Haskell to DEST.",
-  "If no FILENAME, use SOURCE as the original name.",
-  "If no DEST or if DEST is `-', write to standard output.",
-  "If no SOURCE or if SOURCE is `-', read standard input."
+  "Usage: ",
+  progName ++ " [FILENAME] [SOURCE] [DEST]",
+  "  Instrument Haskell module for debugging from SOURCE (derived from FILENAME) and write",
+  "  standard Haskell to DEST.",
+  "  If no FILENAME, use SOURCE as the original name.",
+  "  If no DEST or if DEST is `-', write to standard output.",
+  "  If no SOURCE or if SOURCE is `-', read standard input.",
+  progName ++ " --defaults",
+  "  Dump a well documented set of default config values to standard output."
   ]
 
 data Config = Config_
