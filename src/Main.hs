@@ -37,6 +37,7 @@ usage progName = unlines [
 data Config = Config_
   { _excluded :: Maybe [String]
   , _instrumentMain :: Maybe Bool
+  , _useHoedBackend :: Maybe Bool
   , _disablePartialTypeSignatureWarnings :: Maybe Bool
   , _enableExtendedDefaultingRules :: Maybe Bool
   , _generateObservableInstances :: Maybe Bool
@@ -53,6 +54,7 @@ instance ToJSON Config where toJSON = genericToJSON configJsonOptions
 
 pattern Config { excluded
                , instrumentMain
+               , useHoedBackend
                , disablePartialTypeSignatureWarnings
                , enableExtendedDefaultingRules
                , generateGenericInstances
@@ -63,6 +65,7 @@ pattern Config { excluded
   Config_
   { _excluded = (fromMaybe [] -> excluded)
   , _instrumentMain = (fromMaybe True -> instrumentMain)
+  , _useHoedBackend = (fromMaybe False -> useHoedBackend)
   , _disablePartialTypeSignatureWarnings = (fromMaybe True -> disablePartialTypeSignatureWarnings)
   , _enableExtendedDefaultingRules = (fromMaybe False -> enableExtendedDefaultingRules)
   , _generateObservableInstances = (fromMaybe False -> generateObservableInstances)
@@ -70,10 +73,10 @@ pattern Config { excluded
   , _excludedFromInstanceGeneration = (fromMaybe [] -> excludedFromInstanceGeneration)
   , _verbose = (fromMaybe False -> verbose)
   }
-  where Config a b c d e f g h = Config_ (Just a) (Just b) (Just c) (Just d) (Just e) (Just f) (Just g) (Just h)
+  where Config a b c d e f g h i = Config_ (Just a) (Just b) (Just c) (Just d) (Just e) (Just f) (Just g) (Just h) (Just i)
 
 defaultConfig :: Config
-defaultConfig = Config_ Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+defaultConfig = Config_ Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 readConfig :: IO Config
 readConfig = do
@@ -97,24 +100,27 @@ defConfig = unlines
   ,"# List of Haskell module names to exclude from instrumentation"
   ,"excluded: []"
   , ""
+  , "# If true, use the Hoed backend for trace generation."
+  , "useHoedBackend: false"
+  , ""
   , "# If true then insert a call to debugRun in the main function."
   , "instrumentMain: true"
   , ""
-  , "# If true, instruct the debug TH wrapper to insert Observable instances for types that derive Generic."
-  , "generateGenericInstances: false"
+  , "# When the Hoed backend is used, instruct the debug TH wrapper to insert Observable instances for types that derive Generic."
+  , "generateObservableInstances: false"
   , ""
-  , "# If true, instruct the debug TH wrapper to insert Generic instances for types that don't derive Generic."
-  , "generateGenericInstances: false"
+  , "# When the Hoed backend is used, instruct the debug TH wrapper to insert Generic instances for types that don't derive Generic."
+  , "generateGenericInstances: true"
+  , ""
+  , "# If the hoed backend is used, insert the ExtendedDefaultRules pragma."
+  , "enableExtendedDefaultingRules: true"
+  , ""
   , ""
   , "# List of types excluded from instance generation"
   , "excludedFromInstanceGeneration: []"
   , ""
   , "# If true, print a line for every instrumented module."
   , "verbose: false"
-  , ""
-  , "# If true, enable GHC extended defaulting rules. This is often required when using debug-hoed"
-  , "enableExtendedDefaultingRules: true"
-  , ""
   , ""
   ]
 
@@ -150,8 +156,9 @@ instrument Config {..} contents
   | otherwise = unlines [top', modules', body'']
   where
     (top, name, modules, body) = parseModule contents
+    debugModule = "Debug" ++ if useHoedBackend then ".Hoed" else ""
     modules' = unlines $ modules ++
-      ["import qualified Debug"] ++
+      ["import qualified " ++ debugModule ++ " as Debug"] ++
       ["import qualified GHC.Generics" | generateGenericInstances]
     top' =
       unlines $
@@ -174,14 +181,14 @@ instrument Config {..} contents
            else id)
         body
     debugWrapper
-      | not (generateGenericInstances || generateObservableInstances) =
-        "Debug.debug"
-      | otherwise =
+      | useHoedBackend && (generateGenericInstances || generateObservableInstances) =
         printf
           "Debug.debug' Debug.Config{Debug.generateGenericInstances=%s,Debug.generateObservableInstances=%s, Debug.excludeFromInstanceGeneration=%s}"
           (show generateGenericInstances)
           (show generateObservableInstances)
           (show excludedFromInstanceGeneration)
+      | otherwise =
+        "Debug.debug"
     body'' = unlines $ (debugWrapper ++ " [d|") : map indent (body' ++ ["  |]"])
 
 instrumentMainFunction l
