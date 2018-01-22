@@ -1,8 +1,8 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS -Wno-incomplete-patterns #-}
 
 module Main (main) where
 
@@ -11,7 +11,6 @@ import Data.Aeson.Types
 import Data.Char
 import Data.List
 import Data.Maybe
-import Data.Yaml
 import Data.Yaml.Config
 import GHC.Generics
 import System.Directory
@@ -51,7 +50,7 @@ configJsonOptions = defaultOptions{fieldLabelModifier = tail}
 instance FromJSON Config where parseJSON = genericParseJSON configJsonOptions
 instance ToJSON Config where toJSON = genericToJSON configJsonOptions
 
-
+{-# COMPLETE Config #-}
 pattern Config { excluded
                , instrumentMain
                , useHoedBackend
