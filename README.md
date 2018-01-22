@@ -45,15 +45,66 @@ The call to `debugView` starts a web browser to view the recorded information, l
 
 ![Debug view output](debug.png)
 
-You can look play with the example results for various examples:
+You can look and play with the example results for various examples:
 
 * [`quicksort "haskell"`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/quicksort.html) as above.
 * [`quicksortBy (<) "haskell"`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/quicksortBy.html), like `quicksort` but using a comparison function and including a trace of `partition` itself.
 * [`lcm_gcd 6 15`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/lcm_gcd.html), computing `lcm 6 15 ^^ gcd 6 15`.
 
+## Build tool: `debug-pp`
+`debug-pp` is a Haskell source preprocessor for streamlining the `debug` instrumentation of a module or a package. It performs the steps described above automatically.
+That is:
+* append an import for the `Debug` module, 
+* wrap the body in a `debug` splice using a TH declaration quasiquote, and
+* add the required GHC extensions.
+
+To instrument a module, add the following pragma to the top of the file:
+```
+{-# OPTIONS -F -pgmF debug-pp #-}
+```
+
+To instrument an entire program, add the following line to your stack descriptor, or if you don't use stack, to your cabal descriptor:
+```
+ghc-options: -F -pgmF debug-pp
+```
+
+In both cases you will also need to modify your Cabal descriptor in order to 
+* add a dependency on the `debug` package
+* (optional) add a build tool depends on `debug-pp` (required Cabal 2.0) :
+```
+Library
+  ...
+  build-tool-depends: debug-pp:debug-pp
+```
+### Configuration
+
+`debug-pp` tries to find a config file in the following locations (from higher to lower precedence):
+
+2. `.debug-pp.yaml` in the current directory (useful for per-directory
+   settings)
+3. `.debug-pp.yaml` in the nearest ancestor directory (useful for
+   per-project settings)
+4. `debug-pp/config.yaml` in the platform’s configuration directory
+   (on Windows, it is %APPDATA%, elsewhere it defaults to `~/.config` and
+   can be overridden by the `XDG_CONFIG_HOME` environment variable;
+   useful for user-wide settings)
+5. `.debug-pp.yaml` in your home directory (useful for user-wide
+   settings)
+6. The default settings.
+
+Use `debug-pp --defaults > .debug-pp.yaml` to dump a
+well-documented default configuration to a file, this way you can get started
+quickly.
+
+The configuration options include:
+* Exclude modules by name.
+* Instrument the `main` function with `debugRun`.
+* Choice of backend.
+* In the case of the `Hoed` backend, whether to enable the automatic deriving of `Generic` and `Observable` instances.
+
 ## Debug backends
 
-The tool offers two alternative backends for generating the debug trace:
+This package offers two alternative backends for generating the debug trace:
 
 * `import Debug` 
 
