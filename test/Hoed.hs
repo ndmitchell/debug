@@ -9,9 +9,6 @@
 module Hoed where
 
 import qualified Data.ByteString.Lazy as B
-import qualified Data.List as List
-import Data.Data
-import Data.Monoid
 import Debug.Record hiding (getDebugTrace)
 import Debug.Hoed
 import System.Exit
@@ -25,22 +22,25 @@ debug [d|
 
     partition               :: (a -> Bool) -> [a] -> ([a],[a])
     {-# INLINE partition #-}
-    partition p xs = foldr (select p) ([],[]) xs
+    partition p = foldr (select p) ([],[])
 
     select :: (a -> Bool) -> a -> ([a], [a]) -> ([a], [a])
     select p x ~(ts,fs) | p x       = (x:ts,fs)
                         | otherwise = (ts, x:fs)
-    |]
 
-debug [d|
     foo :: m a -> m a
     foo = id
-    |]
+
+    listcomp y = sum [x*2 | x <- [1..y]]
+
+    listmap y = sum $ map (\x -> 1+x*2) [1..y]
+  |]
 
 main = do
-    _ <- return ()
-    trace <- getDebugTrace defaultHoedOptions $ putStrLn$ quicksort (<) "haskell"
+    trace <- getDebugTrace defaultHoedOptions $ do
+      print (quicksort (<) "haskell")
+      print (listmap 3)
+      print (listcomp 3)
     debugPrintTrace trace
     B.writeFile "hoed.json" $ debugJSONTrace trace
     exitWith =<< system "stack exec diff hoed.json test/ref/hoed.json"
-    debugSaveTrace "trace.html" trace

@@ -91,7 +91,7 @@ adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_))
     tag <- newName "tag"
     args <- sequence [newName $ "arg" ++ show i | i <- [1 .. length arity]]
     let addTag (Clause ps bod inner) = Clause (VarP tag:ps) bod inner
-    let clauses2 = map addTag $ transformBi (adjustValD tag) clauses
+    let clauses2 = map addTag $ transformBi (adjustPat tag) clauses
     let args2 = [VarE 'var `AppE` VarE tag `AppE` toLitPre "$" a `AppE` VarE a | a <- args]
     let info = ConE 'Function `AppE`
             packLit (toLit name) `AppE`
@@ -186,9 +186,6 @@ infixExpDisplayName e =
 
 prettyPrint = pprint . transformBi f
     where f (Name x _) = Name x NameS -- avoid nasty qualifications
-
-adjustValD tag decl@ValD{} = transformBi (adjustPat tag) decl
-adjustValD tag other       = other
 
 adjustPat :: Name -> Pat -> Pat
 adjustPat tag (VarP x) = ViewP (VarE 'var `AppE` VarE tag `AppE` toLit x) (VarP x)
