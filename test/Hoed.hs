@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 {-# LANGUAGE ExtendedDefaultRules, FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
@@ -8,11 +9,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Hoed where
 
-import qualified Data.ByteString.Lazy as B
+import Control.Monad
+import Data.Aeson
 import Debug.Record hiding (getDebugTrace)
 import Debug.Hoed
-import System.Exit
-import System.Process
+import qualified Data.ByteString.Lazy as B
+import Util
 
 debug [d|
     quicksort :: (a -> a -> Bool) -> [a] -> [a]
@@ -42,5 +44,6 @@ main = do
       print (listmap 3)
       print (listcomp 3)
     debugPrintTrace trace
-    B.writeFile "hoed.json" $ debugJSONTrace trace
-    exitWith =<< system "stack exec diff hoed.json test/ref/hoed.json"
+    Just refTrace <- decode <$> B.readFile "test/ref/hoed.json"
+    unless (equivalentTrace trace refTrace) $
+      error "Trace does not match the reference value"
