@@ -9,9 +9,6 @@
 module Hoed where
 
 import qualified Data.ByteString.Lazy as B
-import qualified Data.List as List
-import Data.Data
-import Data.Monoid
 import Debug.Record hiding (getDebugTrace)
 import Debug.Hoed
 import System.Exit
@@ -25,7 +22,7 @@ debug [d|
 
     partition               :: (a -> Bool) -> [a] -> ([a],[a])
     {-# INLINE partition #-}
-    partition p xs = foldr (select p) ([],[]) xs
+    partition p = foldr (select p) ([],[])
 
     select :: (a -> Bool) -> a -> ([a], [a]) -> ([a], [a])
     select p x ~(ts,fs) | p x       = (x:ts,fs)
