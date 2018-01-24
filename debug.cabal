@@ -101,10 +101,7 @@ test-suite debug-hoed-test
     hs-source-dirs: test
     ghc-options:  -main-is Hoed
     build-depends:
-        base == 4.*,
+        aeson,
         bytestring,
-        directory,
-        extra,
-        filepath,
-        debug,
-        process
+        base == 4.*,
+        debug
