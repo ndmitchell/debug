@@ -43,7 +43,9 @@ main = do
       print (quicksort (<) "haskell")
       print (listmap 3)
       print (listcomp 3)
-    debugPrintTrace trace
+    -- see https://github.com/feuerbach/ansi-terminal/issues/47 as this test fails on Appveyor
+    -- can remove once ansi-terminal-0.8 is available in Stackage LTS (which will be v11)
+    try_ $ debugPrintTrace trace
     Just refTrace <- decode <$> B.readFile "test/ref/hoed.json"
     unless (equivalentTrace trace refTrace) $
       error "Trace does not match the reference value"
