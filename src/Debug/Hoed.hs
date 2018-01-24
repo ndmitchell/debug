@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DeriveGeneric     #-}
@@ -92,6 +93,8 @@ import           GHC.Exts                    (IsList (..))
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
 import           System.Clock
+
+{-# ANN module ("hlint: ignore Redundant bracket" :: String) #-}
 
 -- | Runs the program collecting a debugging trace and then opens a web browser to inspect it.
 --
@@ -277,10 +280,13 @@ debug' Config{..} q = do
        , PartialTypeSignatures
        , ExtendedDefaultRules
        , FlexibleContexts
-       ] ++
+       ]
+#if __GLASGOW_HASKELL__ >= 802
+       ++
        [DeriveAnyClass | generateObservableInstances] ++
        [DerivingStrategies | generateObservableInstances] ++
        [DeriveGeneric | generateGenericInstances]
+#endif
       )
   when (missing /= []) $
     error $
@@ -309,6 +315,8 @@ debug' Config{..} q = do
         -- HACK We embed the source code of the function in the label,
         --      which is then unpacked by 'convert'
       createLabel n dec = nameBase n ++ "\n" ++ prettyPrint dec
+
+#if __GLASGOW_HASKELL__ >= 820
       updateDerivs derivs
         | hasGenericInstance <- not $ null $ filterDerivingClausesByName ''Generic derivs
         = [ DerivClause (Just StockStrategy)    [ConT ''Generic]
@@ -320,6 +328,9 @@ debug' Config{..} q = do
           , hasGenericInstance || generateGenericInstances
           ] ++
           derivs
+      filterDerivingClausesByName n' derivs =
+        [ it | it@(DerivClause _ preds) <- derivs , ConT n <- preds , n == n']
+#endif
   fmap concat $
     forM decs $ \dec ->
       case dec of
@@ -345,15 +356,16 @@ debug' Config{..} q = do
             let ty' = adjustTy ty
             ty'' <- renameForallTyVars ty'
             return [SigD n ty', SigD n' ty'']
+#if __GLASGOW_HASKELL__ >= 820
         DataD cxt1 name tt k cons derivs
           | not $ Set.member (prettyPrint name) excludedSet
           -> return [DataD cxt1 name tt k cons $ updateDerivs derivs]
         NewtypeD cxt1 name tt k cons derivs
           | not $ Set.member (prettyPrint name) excludedSet
           -> return [NewtypeD cxt1 name tt k cons $ updateDerivs derivs]
+#endif
         _ -> return [dec]
 
-filterDerivingClausesByName n' derivs = [ it | it@(DerivClause _ preds) <- derivs , ConT n <- preds , n == n']
 
 mkDebugName n@(c:_)
   | isAlpha c || c == '_' = n ++ "_debug"
@@ -394,7 +406,7 @@ applyRenaming _ other     = return other
 getVarNameFromTyBndr (PlainTV n)    = n
 getVarNameFromTyBndr (KindedTV n _) = n
 
-applyRenamingToTyBndr vv (PlainTV n)    = plainTV <$> Map.lookup n vv
+applyRenamingToTyBndr vv (PlainTV n)    = PlainTV <$> Map.lookup n vv
 applyRenamingToTyBndr vv (KindedTV n k) = (`KindedTV` k) <$> Map.lookup n vv
 
 hasRankNTypes (ForallT vars ctxt typ) = hasRankNTypes' typ
