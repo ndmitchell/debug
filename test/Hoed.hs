@@ -7,7 +7,7 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Hoed where
+module Hoed(main) where
 
 import Control.Monad
 import Data.Aeson
