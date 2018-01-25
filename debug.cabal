@@ -100,8 +100,12 @@ test-suite debug-hoed-test
     main-is: Hoed.hs
     hs-source-dirs: test
     ghc-options:  -main-is Hoed
+    other-modules: Util
     build-depends:
         aeson,
         bytestring,
+        containers,
+        extra,
+        text,
         base == 4.*,
         debug
