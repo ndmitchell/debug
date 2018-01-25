@@ -288,13 +288,14 @@ instance NFData CallData
 
 instance FromJSON CallData where
   parseJSON (Object v) =
-    CallData <$> v .: "" <*> vals <*> v .: "$depends" <*> v .: "$parents"
+    CallData <$> v .: "" <*> vals <*> (fromMaybe [] <$> (v .:? "$depends")) <*>
+    (fromMaybe [] <$> (v .:? "$parents"))
     where
       vals =
         sequence
           [ (k, ) <$> parseJSON x
           | (k, x) <- HM.toList v
-          , not(T.null k)
+          , not (T.null k)
           , k /= "$depends"
           , k /= "$parents"
           ]

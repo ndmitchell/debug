@@ -1,9 +1,13 @@
 sudo: required
-env:
-- GHCVER=8.0.2
-- GHCVER=8.2.2
-- GHCVER=8.4.1
-- GHCVER=head
+
+matrix:
+  include:
+  - env: GHCVER=8.0.2
+  - env: GHCVER=8.2.2
+  - env: GHCVER=8.4.1
+  - env: GHCVER=head
+  allow_failures:
+  - env: GHCVER=8.0.2 # Decide about https://github.com/ndmitchell/debug/issues/31
 
 script:
 - curl -sL https://raw.github.com/ndmitchell/neil/master/travis.sh | sh
