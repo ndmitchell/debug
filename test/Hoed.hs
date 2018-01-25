@@ -10,6 +10,7 @@
 module Hoed(main) where
 
 import Control.Monad
+import Control.Exception.Extra
 import Data.Aeson
 import Debug.Record hiding (getDebugTrace)
 import Debug.Hoed
