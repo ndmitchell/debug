@@ -5,7 +5,7 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-} -- GHC 8.0 doesn't know about COMPLETE pragmas
 
-module Main (main) where
+module DebugPP(main) where
 
 import Control.Monad
 import Data.Aeson.Types

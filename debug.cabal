@@ -70,9 +70,10 @@ library
         Paths_debug
 
 executable debug-pp
-  main-is: Main.hs
+  main-is: DebugPP.hs
+  ghc-options:         -main-is DebugPP
   hs-source-dirs:
-      src-debug-pp
+      src
   build-depends:
       aeson
     , base >=4.7 && <5

@@ -311,12 +311,12 @@ debug' Config{..} q = do
           decs
   names <-
     sequence [(n, ) <$> newName (mkDebugName (nameBase n)) | n <- sourceNames]
-  let excludedSet = Set.fromList excludeFromInstanceGeneration
-        -- HACK We embed the source code of the function in the label,
-        --      which is then unpacked by 'convert'
+  let  -- HACK We embed the source code of the function in the label,
+       --      which is then unpacked by 'convert'
       createLabel n dec = nameBase n ++ "\n" ++ prettyPrint dec
 
 #if __GLASGOW_HASKELL__ >= 820
+      excludedSet = Set.fromList excludeFromInstanceGeneration
       updateDerivs derivs
         | hasGenericInstance <- not $ null $ filterDerivingClausesByName ''Generic derivs
         = [ DerivClause (Just StockStrategy)    [ConT ''Generic]
