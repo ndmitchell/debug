@@ -382,11 +382,11 @@ prettyPrint = pprint . transformBi f
     where f (Name x _) = Name x NameS -- avoid nasty qualifications
 
 -- Add a wildcard for Observable a
--- Tyvar renaming is a work around for http://ghc.haskell.org/trac/ghc/ticket/14643
 adjustTy (ForallT vars ctxt typ) =
     ForallT vars (delete WildCardT ctxt ++ [WildCardT]) typ
 adjustTy other = adjustTy $ ForallT [] [] other
 
+-- Tyvar renaming is a work around for http://ghc.haskell.org/trac/ghc/ticket/14643
 renameForallTyVars (ForallT vars ctxt typ) = do
   let allVarNames = case vars of
                       []-> snub $ universeBi ctxt ++ universeBi typ
