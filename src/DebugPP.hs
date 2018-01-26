@@ -1,25 +1,27 @@
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+{-# LANGUAGE DeriveGeneric   #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE ViewPatterns    #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-missing-pattern-synonym-signatures  #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-} -- GHC 8.0 doesn't know about COMPLETE pragmas
 
 module DebugPP(main) where
 
-import Control.Monad
-import Data.Aeson.Types
-import Data.Char
-import Data.List
-import Data.Maybe
-import Data.Yaml.Config
-import GHC.Generics
-import System.Directory
-import System.Environment
-import System.Exit
-import System.FilePath
-import System.IO
-import Text.Printf
+import           Control.Monad
+import           Data.Aeson.Types
+import           Data.Char
+import           Data.List
+import           Data.Maybe
+import           Data.Yaml.Config
+import           GHC.Generics
+import           System.Directory
+import           System.Environment
+import           System.Exit
+import           System.FilePath
+import           System.IO
+import           Text.Printf
 
 usage :: String -> String
 usage progName = unlines [
@@ -35,17 +37,18 @@ usage progName = unlines [
   ]
 
 data Config = Config_
-  { _excluded :: Maybe [String]
-  , _instrumentMain :: Maybe Bool
-  , _useHoedBackend :: Maybe Bool
+  { _excluded                            :: Maybe [String]
+  , _instrumentMain                      :: Maybe Bool
+  , _useHoedBackend                      :: Maybe Bool
   , _disablePartialTypeSignatureWarnings :: Maybe Bool
-  , _enableExtendedDefaultingRules :: Maybe Bool
-  , _generateObservableInstances :: Maybe Bool
-  , _generateGenericInstances :: Maybe Bool
-  , _excludedFromInstanceGeneration :: Maybe [String]
-  , _verbose :: Maybe Bool
+  , _enableExtendedDefaultingRules       :: Maybe Bool
+  , _generateObservableInstances         :: Maybe Bool
+  , _generateGenericInstances            :: Maybe Bool
+  , _excludedFromInstanceGeneration      :: Maybe [String]
+  , _verbose                             :: Maybe Bool
   } deriving (Generic, Show)
 
+configJsonOptions :: Options
 configJsonOptions = defaultOptions{fieldLabelModifier = tail}
 
 instance FromJSON Config where parseJSON = genericParseJSON configJsonOptions
@@ -93,6 +96,7 @@ readConfig = do
   where
     ancestors = map joinPath . tail . inits . splitPath
 
+defConfig :: String
 defConfig = unlines
   ["# debug-pp configuration file"
   ,"# ==========================="
@@ -151,6 +155,7 @@ main = do
   when verbose $
     putStrLn $ "[debug-pp] Instrumented " ++ orig
 
+instrument :: Config -> String -> String
 instrument Config {..} contents
   | name `elem` excluded = contents
   | otherwise = unlines [top', modules', body'']
@@ -191,12 +196,14 @@ instrument Config {..} contents
         "Debug.debug"
     body'' = unlines $ (debugWrapper ++ " [d|") : map indent (body' ++ ["  |]"])
 
+instrumentMainFunction :: String -> String
 instrumentMainFunction l
   | ('m':'a':'i':'n':rest) <- l
   , ('=':rest') <- dropWhile isSpace rest
   , not ("debugRun" `isPrefixOf` rest') = "main = Debug.debugRun $ " ++ rest'
   | otherwise = l
 
+parseModule :: String -> ([String], String, [String], [String])
 parseModule contents = (map fst top, name, modules, body)
   where
     contents' = annotateBlockComments (lines contents)
@@ -211,8 +218,9 @@ parseModule contents = (map fst top, name, modules, body)
     body = map fst $ dropWhile snd body0
     modules = map fst modules0 ++ map fst (takeWhile snd body0)
 
+indent :: String -> String
 indent it@('#':_) = it
-indent other = "  " ++ other
+indent other      = "  " ++ other
 
 -- Annotate every line with True if its inside the span of a block comment.
 -- @
@@ -221,18 +229,22 @@ indent other = "  " ++ other
 --   but this is -}         -- True
 annotateBlockComments :: [String] -> [(String, Bool)]
 annotateBlockComments = annotateBlockComments' False
+annotateBlockComments' :: Bool -> [String] -> [(String, Bool)]
 annotateBlockComments' _ [] = []
 annotateBlockComments' False (l:rest) = (l,False) : annotateBlockComments' (startsBlockComment l) rest
 annotateBlockComments' True  (l:rest) = (l,True) : annotateBlockComments' (not $ endsBlockComment l) rest
 
+startsBlockComment :: String -> Bool
 startsBlockComment line
     | Just l' <- dropUntilIncluding "{-" line = not $ endsBlockComment l'
     | otherwise = False
 
+endsBlockComment :: String -> Bool
 endsBlockComment line
     | Just l' <- dropUntilIncluding "-}" line = not $ startsBlockComment l'
     | otherwise = False
 
+dropUntilIncluding :: Eq a => [a] -> [a] -> Maybe [a]
 dropUntilIncluding needle haystack
   | [] <- haystack = Nothing
   | Just x <- stripPrefix needle haystack = Just x
