@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RecordWildCards #-}
-module Util where
+module Util(equivalentTrace) where
 
 import Data.Set (Set)
 import qualified Data.Set as Set
