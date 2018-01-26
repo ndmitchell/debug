@@ -153,11 +153,11 @@ main = do
 
 let0, let1, let2 :: String
 let0 = "f"
-let1 = "let (Debug.Record.var tag_0 \"_select_0\" -> _select_0_1) = select_2 p_3"
-let2 = "let (Debug.Record.var tag_0 \"_foldr\" -> _foldr_1) = Data.Foldable.foldr \
-        \(let (Debug.Record.var tag_0 \"_select_0\" -> _select_0_2) = select_3 p_4 \
+let1 = "let (Debug.DebugTrace.var tag_0 \"_select_0\" -> _select_0_1) = select_2 p_3"
+let2 = "let (Debug.DebugTrace.var tag_0 \"_foldr\" -> _foldr_1) = Data.Foldable.foldr \
+        \(let (Debug.DebugTrace.var tag_0 \"_select_0\" -> _select_0_2) = select_3 p_4 \
         \in _select_0_2)"
-let3 = "let (Debug.Record.var tag_0 \"_foldr'\" -> _foldr'_1) = (let (Debug.Record.var \tag_0 \
-       \\"_foldr\" -> _foldr_2) = Data.Foldable.foldr (let (Debug.Record.var tag_0 \"_select_0\" \
+let3 = "let (Debug.DebugTrace.var tag_0 \"_foldr'\" -> _foldr'_1) = (let (Debug.DebugTrace.var \tag_0 \
+       \\"_foldr\" -> _foldr_2) = Data.Foldable.foldr (let (Debug.DebugTrace.var tag_0 \"_select_0\" \
        \-> _select_0_3) = select_4 p_5 in _select_0_3) in _foldr_2) ([], []) \
        \in _foldr'_1"

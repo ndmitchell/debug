@@ -62,7 +62,7 @@ library
     exposed-modules:
         Debug
         Debug.Hoed
-        Debug.Record
+        Debug.DebugTrace
         Debug.Util
         Debug.Variables
 

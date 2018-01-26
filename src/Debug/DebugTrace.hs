@@ -10,16 +10,16 @@
 
 -- | Module for recording and manipulating debug traces. For most users, the
 --   @TemplateHaskell@ helpers in "Debug" should be sufficient.
-module Debug.Record(
-    -- * Viewing
+module Debug.DebugTrace(
+    -- * Debug traces
+    DebugTrace(..),
+    Function(..),
+    CallData(..),
+    -- * Viewing the trace
     debugPrintTrace,
     debugJSONTrace,
     debugViewTrace,
-    debugSaveTrace,
-    -- * Types
-    Function(..),
-    DebugTrace(..),
-    CallData(..)
+    debugSaveTrace
     ) where
 
 import Control.DeepSeq

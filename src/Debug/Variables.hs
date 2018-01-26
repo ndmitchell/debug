@@ -50,7 +50,7 @@
 --   Alternatively call 'debugSave' to write the web page to a known location.
 --
 --   For more ways to view the result (e.g. producing JSON) or record traces (without using
---   @TemplateHaskell@) see "Debug.Record".
+--   @TemplateHaskell@) see "Debug.DebugTrace".
 module Debug.Variables(
     debug,
     debugClear,
@@ -86,7 +86,7 @@ import qualified Data.Text.Lazy.IO          as TL
 import           Data.Text.Read             as T
 import           Data.Tuple.Extra
 import qualified Data.Vector                as V
-import           Debug.Record
+import           Debug.DebugTrace
 import           Debug.Util
 import           GHC.Generics
 import           GHC.Prim

@@ -5,7 +5,7 @@ module Util(equivalentTrace) where
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
-import Debug.Record
+import Debug.DebugTrace
 
 equivalentTrace :: DebugTrace -> DebugTrace -> Bool
 equivalentTrace tr1 tr2 =

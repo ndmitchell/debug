@@ -85,7 +85,7 @@ import qualified Data.Text                   as T
 import "Hoed"    Debug.Hoed
 import           Debug.Hoed.Render
 import           Debug.Util
-import           Debug.Record                as D (CallData (..),
+import           Debug.DebugTrace            as D (CallData (..),
                                                    DebugTrace (..),
                                                    Function (..),
                                                    debugViewTrace
