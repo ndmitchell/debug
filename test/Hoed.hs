@@ -50,3 +50,4 @@ main = do
     Just refTrace <- decode <$> B.readFile "test/ref/hoed.json"
     unless (equivalentTrace trace refTrace) $
       error "Trace does not match the reference value"
+    print (foo ['c'])
