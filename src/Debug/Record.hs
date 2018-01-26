@@ -11,24 +11,17 @@
 -- | Module for recording and manipulating debug traces. For most users, the
 --   @TemplateHaskell@ helpers in "Debug" should be sufficient.
 module Debug.Record(
-    -- * Recording
-    Function(..),
-    Call,
-    funInfo, fun, var,
-    debugClear,
-    debugRun,
     -- * Viewing
-    debugPrint, debugPrintTrace,
-    debugJSON, debugJSONTrace,
-    debugView, debugViewTrace,
-    debugSave, debugSaveTrace,
-    -- * Exporting
-    getDebugTrace,
+    debugPrintTrace,
+    debugJSONTrace,
+    debugViewTrace,
+    debugSaveTrace,
+    -- * Types
+    Function(..),
     DebugTrace(..),
     CallData(..)
     ) where
 
-import Debug.Variables
 import Control.DeepSeq
 import Control.Exception
 import Control.Monad
@@ -37,7 +30,6 @@ import Data.Aeson.Text
 import Data.Aeson.Types
 import Data.Char
 import Data.Hashable
-import Data.IORef
 import Data.List.Extra
 import Data.Maybe
 import Data.Monoid
@@ -53,7 +45,6 @@ import qualified Data.Vector as V
 import GHC.Generics
 import System.IO
 import System.Directory
-import System.IO.Unsafe
 import Text.Show.Functions() -- Make sure the Show for functions instance exists
 import qualified Language.Javascript.JQuery as JQuery
 import Web.Browser
@@ -72,37 +63,6 @@ data Function = Function
 
 instance Hashable Function
 instance NFData Function
-
--- | A single function call, used to attach additional information
-data Call = Call Function (IORef [(Text, Var)])
-
-{-# NOINLINE refVariables #-}
-refVariables :: IORef Variables
-refVariables = unsafePerformIO $ newIORef newVariables
-
-{-# NOINLINE refCalls #-}
-refCalls :: IORef [Call]
-refCalls = unsafePerformIO $ newIORef []
-
--- | Clear all debug information. Useful when working in @ghci@ to reset
---   any previous debugging work and reduce the amount of output.
-debugClear :: IO ()
-debugClear = do
-    writeIORef refVariables newVariables
-    writeIORef refCalls []
-
--- | Print information about the observed function calls to 'stdout',
---   in a human-readable format.
-debugPrint :: IO ()
-debugPrint = getDebugTrace >>= debugPrintTrace
-
--- | Run a computation and open a browser window showing observed function calls.
---
---   @ main = debugRun $ do
---       ...
---   @
-debugRun :: IO a -> IO a
-debugRun = bracket_ debugClear debugView
 
 -- | Print information about the observed function calls to 'stdout',
 --   in a human-readable format.
@@ -152,10 +112,6 @@ debugPrintTrace DebugTrace{..} = do
           getArgIndex _ = Nothing
 
 -- | Save information about observed functions to the specified file, in HTML format.
-debugSave :: FilePath -> IO ()
-debugSave fp = debugSaveTrace fp =<< getDebugTrace
-
--- | Save information about observed functions to the specified file, in HTML format.
 debugSaveTrace :: FilePath -> DebugTrace -> IO ()
 debugSaveTrace file db = do
     html <- TL.readFile =<< getDataFileName "html/debug.html"
@@ -168,10 +124,6 @@ debugSaveTrace file db = do
             | "code.jquery.com/jquery" `TL.isInfixOf` x = script jquery
             | otherwise = x
     TL.writeFile file $ TL.unlines $ map f $ TL.lines html
-
--- | Open a web browser showing information about observed functions.
-debugView :: IO ()
-debugView = getDebugTrace >>= debugViewTrace
 
 -- | Open a web browser showing information about observed functions.
 debugViewTrace :: DebugTrace -> IO ()
@@ -188,7 +140,6 @@ debugViewTrace db = do
             "Failed to start a web browser, open: " ++ file ++ "\n" ++
             "In future you may wish to use 'debugSaveTrace."
 
-
 #if __GLASGOW_HASKELL__ >= 800
 -- On older GHC's this level of overlap leads to a compile error
 
@@ -198,44 +149,8 @@ instance {-# OVERLAPS #-} Show a where
     show _ = "?"
 #endif
 
-{-# NOINLINE fun #-}
--- | Called under a lambda with a function name to provide a unique context for
---   a particular call, e.g.:
---
--- > tracedAdd x y = fun "add" $ \t -> var t "x" x + var t "y" y
---
---   This function involves giving identity to function calls, so is unsafe,
---   and will only work under a lambda.
-fun :: Show a => String -> (Call -> a) -> a
-fun name = funInfo $ Function (T.pack name) "" [] ""
-
--- | A version of 'fun' allowing you to pass further information about the
---   'Function' which is used when showing debug views.
-funInfo :: Show a => Function -> (Call -> a) -> a
-{-# NOINLINE funInfo #-}
-funInfo info f = unsafePerformIO $ do
-    ref <- newIORef []
-    let x = Call info ref
-    atomicModifyIORef refCalls $ \v -> (x:v, ())
-    return $ f x
-
-{-# NOINLINE var #-}
--- | Used in conjunction with 'fun' to annotate variables. See 'fun' for an example.
-var :: Show a => Call -> String -> a -> a
-var (Call _ ref) name val = unsafePerformIO $ do
-    var <- atomicModifyIORef refVariables $ addVariable val
-    atomicModifyIORef ref $ \v -> ((T.pack name, var) :v, ())
-    return val
-
 ---------------------------------
 -- Json output
-
--- | Obtain information about observed functions in JSON format.
---   The JSON format is not considered a stable part of the interface,
---   more presented as a back door to allow exploration of alternative
---   views.
-debugJSON :: IO String
-debugJSON = B.unpack . debugJSONTrace <$> getDebugTrace
 
 -- | Obtain information about observed functions in JSON format.
 --   The JSON format is not considered a stable part of the interface,
@@ -251,24 +166,6 @@ data DebugTrace = DebugTrace
   , calls     :: [CallData]  -- ^ Flat list of all the function calls traced
   }
   deriving (Eq, Generic, Show)
-
--- | Returns all the information about the observed function accumulated so far.
-getDebugTrace :: IO DebugTrace
-getDebugTrace = do
-  vars <- readIORef refVariables
-  vars <- return $ map varShow $ listVariables vars
-  calls <- readIORef refCalls
-  let infos = nubOrd [x | Call x _ <- calls]
-      infoId = HM.fromList $ zip infos [0::Int ..]
-  callEntries <-
-    forM (reverse calls) $ \(Call info vars) -> do
-      vars <- readIORef vars
-      let callFunctionId   = infoId HM.! info
-          callVals = map (second varId) vars
-          callDepends = [] -- available in the Hoed backend but not in this one
-          callParents = [] -- available in the Hoed backend but not in this one
-      return CallData{..}
-  return $ DebugTrace infos (map T.pack vars) callEntries
 
 instance FromJSON DebugTrace
 instance ToJSON DebugTrace where
@@ -319,6 +216,7 @@ instance ToJSON CallData where
         | null callParents = mempty
         | otherwise = "$parents" .= callParents
 
+functionJsonOptions :: Options
 functionJsonOptions = defaultOptions{fieldLabelModifier = f}
     where
         f x | Just (x:xs) <- stripPrefix "fun" x = toLower x : xs

@@ -69,7 +69,6 @@ module Debug.Hoed
 import           Control.Monad
 import           Data.Bifunctor
 import           Data.Char
-import           Data.Data
 import           Data.Generics.Uniplate.Data
 import           Data.Graph.Libgraph
 import           Data.Hashable
@@ -84,6 +83,7 @@ import           Data.Text                   (Text, pack)
 import qualified Data.Text                   as T
 import "Hoed"    Debug.Hoed
 import           Debug.Hoed.Render
+import           Debug.Util
 import           Debug.Record                as D (CallData (..),
                                                    DebugTrace (..),
                                                    Function (..),
@@ -375,12 +375,6 @@ mkDebugName [] = error "unreachable: impossible"
 adjustInnerSigD (SigD n ty) = SigD n (adjustTy ty)
 adjustInnerSigD other       = other
 
-----------------------------------------------------------
--- With a little help from Neil Mitchell's debug package
-prettyPrint :: (Data a, Ppr a) => a -> String
-prettyPrint = pprint . transformBi f
-    where f (Name x _) = Name x NameS -- avoid nasty qualifications
-
 -- Add a wildcard for Observable a
 adjustTy (ForallT vars ctxt typ) =
     ForallT vars (delete WildCardT ctxt ++ [WildCardT]) typ
@@ -408,10 +402,6 @@ getVarNameFromTyBndr (KindedTV n _) = n
 
 applyRenamingToTyBndr vv (PlainTV n)    = PlainTV <$> Map.lookup n vv
 applyRenamingToTyBndr vv (KindedTV n k) = (`KindedTV` k) <$> Map.lookup n vv
-
-hasRankNTypes (ForallT vars ctxt typ) = hasRankNTypes' typ
-hasRankNTypes typ                     = hasRankNTypes' typ
-hasRankNTypes' typ = not $ null [ () | ForallT{} <- universe typ]
 
 adjustValD decl@ValD{} = transformBi adjustPat decl
 adjustValD other       = other

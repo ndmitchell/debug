@@ -64,9 +64,9 @@ library
         Debug.Hoed
         Debug.Record
         Debug.Util
+        Debug.Variables
 
     other-modules:
-        Debug.Variables
         Paths_debug
 
 executable debug-pp
