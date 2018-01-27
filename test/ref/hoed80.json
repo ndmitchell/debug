@@ -1,0 +1,1 @@
+{"functions":[{"name":"listcomp","source":"\nlistcomp y = sum [x * 2 | x <- [1..y]]","arguments":["$arg1"],"result":"$result"},{"name":"listmap","source":"\nlistmap y = sum $ map (\\x -> 1 + (x * 2)) [1..y]","arguments":["$arg1"],"result":"$result"}],"variables":["15","12","3"],"calls":[{"":0,"$result":1,"$arg1":2},{"":1,"$result":0,"$arg1":2}]}

@@ -26,6 +26,7 @@ data-files:
 
 extra-source-files:
     test/ref/hoed.json
+    test/ref/hoed80.json
 
 source-repository head
     type:     git
@@ -42,7 +43,7 @@ library
         aeson,
         containers,
         ghc-prim,
-        Hoed >= 0.4.1,
+        Hoed >= 0.4.1 && < 0.5,
         libgraph >= 1.14,
         extra,
         deepseq,
@@ -62,17 +63,18 @@ library
     exposed-modules:
         Debug
         Debug.Hoed
-        Debug.Record
+        Debug.DebugTrace
         Debug.Util
+        Debug.Variables
 
     other-modules:
-        Debug.Variables
         Paths_debug
 
 executable debug-pp
-  main-is: Main.hs
+  main-is: DebugPP.hs
+  ghc-options:         -main-is DebugPP
   hs-source-dirs:
-      src-debug-pp
+      src
   build-depends:
       aeson
     , base >=4.7 && <5

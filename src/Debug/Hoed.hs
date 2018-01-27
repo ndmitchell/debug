@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DeriveGeneric     #-}
@@ -68,7 +70,6 @@ module Debug.Hoed
 import           Control.Monad
 import           Data.Bifunctor
 import           Data.Char
-import           Data.Data
 import           Data.Generics.Uniplate.Data
 import           Data.Graph.Libgraph
 import           Data.Hashable
@@ -83,7 +84,8 @@ import           Data.Text                   (Text, pack)
 import qualified Data.Text                   as T
 import "Hoed"    Debug.Hoed
 import           Debug.Hoed.Render
-import           Debug.Record                as D (CallData (..),
+import           Debug.Util
+import           Debug.DebugTrace            as D (CallData (..),
                                                    DebugTrace (..),
                                                    Function (..),
                                                    debugViewTrace
@@ -92,6 +94,8 @@ import           GHC.Exts                    (IsList (..))
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
 import           System.Clock
+
+{-# ANN module ("hlint: ignore Redundant bracket" :: String) #-}
 
 -- | Runs the program collecting a debugging trace and then opens a web browser to inspect it.
 --
@@ -111,7 +115,7 @@ getDebugTrace hoedOptions program = do
   let result = convert compTree
       !_     = length(variables result)
   t' <- getTime Monotonic
-  let compTime = fromIntegral(toNanoSecs(diffTimeSpec t t')) * 1e-9
+  let compTime :: Double = fromIntegral(toNanoSecs(diffTimeSpec t t')) * 1e-9
   putStrLn $ "=== Debug Trace (" ++ show compTime ++ " seconds) ==="
   return result
 
@@ -168,6 +172,7 @@ annotateCompTree compTree = AnnotatedCompTree{..}  where
 hoedCallValues :: HoedCallDetails -> [Hashed Text]
 hoedCallValues HoedCallDetails{..} = result : (argValues ++ clauseValues)
 
+getRelatives :: (Vertex -> [Vertex]) -> Vertex -> [Int]
 getRelatives rel v =
       [ stmtIdentifier
         | v'@Vertex {vertexStmt = CompStmt {stmtIdentifier, stmtDetails = StmtLam {}}} <- rel v
@@ -236,7 +241,7 @@ convert hoedCompTree = DebugTrace {..}
          , let callVals =
                  map (second lookupVariableIndex) $
                  ("$result", result) :
-                 zipWith (\i v -> ("$arg" <> pack (show i), v)) [1 ..] argValues ++
+                 zipWith (\i v -> ("$arg" <> pack (show i), v)) [(1::Int) ..] argValues ++
                  zip clauses clauseValues
          , let callDepends = map lookupCallIndex depends
          , let callParents = map lookupCallIndex parents
@@ -264,6 +269,7 @@ data Config = Config
   }
 
 -- | A @TemplateHaskell@ wrapper to convert normal functions into traced functions.
+debug :: Q [Dec] -> Q [Dec]
 debug = debug' (Config False False [])
 
 -- | A @TemplateHaskell@ wrapper to convert normal functions into traced functions
@@ -277,10 +283,13 @@ debug' Config{..} q = do
        , PartialTypeSignatures
        , ExtendedDefaultRules
        , FlexibleContexts
-       ] ++
+       ]
+#if __GLASGOW_HASKELL__ >= 802
+       ++
        [DeriveAnyClass | generateObservableInstances] ++
        [DerivingStrategies | generateObservableInstances] ++
        [DeriveGeneric | generateGenericInstances]
+#endif
       )
   when (missing /= []) $
     error $
@@ -305,10 +314,12 @@ debug' Config{..} q = do
           decs
   names <-
     sequence [(n, ) <$> newName (mkDebugName (nameBase n)) | n <- sourceNames]
-  let excludedSet = Set.fromList excludeFromInstanceGeneration
-        -- HACK We embed the source code of the function in the label,
-        --      which is then unpacked by 'convert'
+  let  -- HACK We embed the source code of the function in the label,
+       --      which is then unpacked by 'convert'
       createLabel n dec = nameBase n ++ "\n" ++ prettyPrint dec
+
+#if __GLASGOW_HASKELL__ >= 820
+      excludedSet = Set.fromList excludeFromInstanceGeneration
       updateDerivs derivs
         | hasGenericInstance <- not $ null $ filterDerivingClausesByName ''Generic derivs
         = [ DerivClause (Just StockStrategy)    [ConT ''Generic]
@@ -320,6 +331,9 @@ debug' Config{..} q = do
           , hasGenericInstance || generateGenericInstances
           ] ++
           derivs
+      filterDerivingClausesByName n' derivs =
+        [ it | it@(DerivClause _ preds) <- derivs , ConT n <- preds , n == n']
+#endif
   fmap concat $
     forM decs $ \dec ->
       case dec of
@@ -345,36 +359,35 @@ debug' Config{..} q = do
             let ty' = adjustTy ty
             ty'' <- renameForallTyVars ty'
             return [SigD n ty', SigD n' ty'']
+#if __GLASGOW_HASKELL__ >= 820
         DataD cxt1 name tt k cons derivs
           | not $ Set.member (prettyPrint name) excludedSet
           -> return [DataD cxt1 name tt k cons $ updateDerivs derivs]
         NewtypeD cxt1 name tt k cons derivs
           | not $ Set.member (prettyPrint name) excludedSet
           -> return [NewtypeD cxt1 name tt k cons $ updateDerivs derivs]
+#endif
         _ -> return [dec]
 
-filterDerivingClausesByName n' derivs = [ it | it@(DerivClause _ preds) <- derivs , ConT n <- preds , n == n']
 
+mkDebugName :: String -> String
 mkDebugName n@(c:_)
   | isAlpha c || c == '_' = n ++ "_debug"
   | otherwise = n ++ "??"
 mkDebugName [] = error "unreachable: impossible"
 
+adjustInnerSigD :: Dec -> Dec
 adjustInnerSigD (SigD n ty) = SigD n (adjustTy ty)
 adjustInnerSigD other       = other
 
-----------------------------------------------------------
--- With a little help from Neil Mitchell's debug package
-prettyPrint :: (Data a, Ppr a) => a -> String
-prettyPrint = pprint . transformBi f
-    where f (Name x _) = Name x NameS -- avoid nasty qualifications
-
 -- Add a wildcard for Observable a
--- Tyvar renaming is a work around for http://ghc.haskell.org/trac/ghc/ticket/14643
+adjustTy :: Type -> Type
 adjustTy (ForallT vars ctxt typ) =
     ForallT vars (delete WildCardT ctxt ++ [WildCardT]) typ
 adjustTy other = adjustTy $ ForallT [] [] other
 
+-- Tyvar renaming is a work around for http://ghc.haskell.org/trac/ghc/ticket/14643
+renameForallTyVars :: Type -> Q Type
 renameForallTyVars (ForallT vars ctxt typ) = do
   let allVarNames = case vars of
                       []-> snub $ universeBi ctxt ++ universeBi typ
@@ -388,23 +401,25 @@ renameForallTyVars (ForallT vars ctxt typ) = do
 
 renameForallTyVars other = return other
 
+applyRenaming :: Map.Map Name Name -> Type -> Maybe Type
 applyRenaming nn (VarT n) = VarT <$> Map.lookup n nn
 applyRenaming _ other     = return other
 
+getVarNameFromTyBndr :: TyVarBndr -> Name
 getVarNameFromTyBndr (PlainTV n)    = n
 getVarNameFromTyBndr (KindedTV n _) = n
 
-applyRenamingToTyBndr vv (PlainTV n)    = plainTV <$> Map.lookup n vv
+applyRenamingToTyBndr :: Map.Map Name Name -> TyVarBndr -> Maybe TyVarBndr
+applyRenamingToTyBndr vv (PlainTV n)    = PlainTV <$> Map.lookup n vv
 applyRenamingToTyBndr vv (KindedTV n k) = (`KindedTV` k) <$> Map.lookup n vv
 
-hasRankNTypes (ForallT vars ctxt typ) = hasRankNTypes' typ
-hasRankNTypes typ                     = hasRankNTypes' typ
-hasRankNTypes' typ = not $ null [ () | ForallT{} <- universe typ]
-
+adjustValD :: Dec -> Dec
 adjustValD decl@ValD{} = transformBi adjustPat decl
 adjustValD other       = other
 
+adjustPat :: Pat -> Pat
 adjustPat (VarP x) = ViewP (VarE 'observe `AppE` toLit x) (VarP x)
 adjustPat x        = x
 
+toLit :: Name -> Exp
 toLit (Name (OccName x) _) = LitE $ StringL x
