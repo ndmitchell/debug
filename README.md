@@ -112,7 +112,8 @@ This package offers two alternative backends for generating the debug trace:
 
 * `import Debug.Hoed` 
 
-   A new experimental backend built on top of [Hoed](https://github.com/MaartenFaddegon/Hoed/pulls). 
+   A new experimental backend built on top of [Hoed](https://github.com/MaartenFaddegon/Hoed/pulls). **Requires GHC 8.2 or higher** 
+
    Fully lazy, able to observe function values and provide call stacks: [example](https://rawgit.com/pepeiborra/debug-hoed/master/example/quicksort.html). The instrumentation is simpler, so it is known to work in more cases. It relies on `Observable` instances  which are derivable (the TH wrapper can take care of this automatically). Note that it will probably not work in multi threaded environments yet.
 
 ## Requirements

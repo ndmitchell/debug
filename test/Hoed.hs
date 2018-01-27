@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 {-# LANGUAGE ExtendedDefaultRules, FlexibleContexts #-}
@@ -7,15 +8,19 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE TemplateHaskell #-}
+-- {-# OPTIONS_GHC -dth-dec-file #-} -- turn on to debug TH
 module Hoed(main) where
 
-import Control.Monad
 import Control.Exception.Extra
-import Data.Aeson
-import Debug.DebugTrace hiding (getDebugTrace)
 import Debug.Hoed
+import Debug.DebugTrace
+
+#if __GLASGOW_HASKELL__ >= 820
+import Control.Monad
+import Data.Aeson
 import qualified Data.ByteString.Lazy as B
 import Util
+
 
 debug [d|
     quicksort :: (a -> a -> Bool) -> [a] -> [a]
@@ -30,24 +35,32 @@ debug [d|
     select :: (a -> Bool) -> a -> ([a], [a]) -> ([a], [a])
     select p x ~(ts,fs) | p x       = (x:ts,fs)
                         | otherwise = (ts, x:fs)
+  |]
+#endif
 
+debug [d|
     foo :: m a -> m a
     foo = id
 
+    listcomp, listmap :: Num a => a -> a
     listcomp y = sum [x*2 | x <- [1..y]]
-
     listmap y = sum $ map (\x -> 1+x*2) [1..y]
   |]
 
+main :: IO ()
 main = do
     trace <- getDebugTrace defaultHoedOptions $ do
+#if __GLASGOW_HASKELL__ >= 820
       print (quicksort (<) "haskell")
-      print (listmap 3)
-      print (listcomp 3)
+#endif
+      print (listmap (3::Int))
+      print (listcomp (3::Int))
     -- see https://github.com/feuerbach/ansi-terminal/issues/47 as this test fails on Appveyor
     -- can remove once ansi-terminal-0.8 is available in Stackage LTS (which will be v11)
     try_ $ debugPrintTrace trace
+#if __GLASGOW_HASKELL__ >= 820
     Just refTrace <- decode <$> B.readFile "test/ref/hoed.json"
     unless (equivalentTrace trace refTrace) $
       error "Trace does not match the reference value"
+#endif
     print (foo ['c'])
