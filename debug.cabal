@@ -26,6 +26,7 @@ data-files:
 
 extra-source-files:
     test/ref/hoed.json
+    test/ref/hoed80.json
 
 source-repository head
     type:     git
