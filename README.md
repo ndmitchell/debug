@@ -47,9 +47,9 @@ The call to `debugView` starts a web browser to view the recorded information, l
 
 You can look and play with the example results for various examples:
 
-* [`quicksort "haskell"`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/quicksort.html) as above.
-* [`quicksortBy (<) "haskell"`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/quicksortBy.html), like `quicksort` but using a comparison function and including a trace of `partition` itself.
-* [`lcm_gcd 6 15`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/lcm_gcd.html), computing `lcm 6 15 ^^ gcd 6 15`.
+* [`quicksort "haskell"`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/output/quicksort.html) as above.
+* [`quicksortBy (<) "haskell"`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/output/quicksortBy.html), like `quicksort` but using a comparison function and including a trace of `partition` itself.
+* [`lcm_gcd 6 15`](https://ci.appveyor.com/api/projects/ndmitchell/debug/artifacts/output/lcm_gcd.html), computing `lcm 6 15 ^^ gcd 6 15`.
 
 ## Build tool: `debug-pp`
 `debug-pp` is a Haskell source preprocessor for streamlining the `debug` instrumentation of a module or a package. It performs the steps described above automatically.
