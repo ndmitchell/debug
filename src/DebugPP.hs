@@ -207,16 +207,35 @@ parseModule :: String -> ([String], String, [String], [String])
 parseModule contents = (map fst top, name, modules, body)
   where
     contents' = annotateBlockComments (lines contents)
-    isImportLine = ("import " `isPrefixOf`)
-    (top, rest) = break (\(l, insideComment) -> not insideComment && isImportLine l) contents'
-    (reverse -> body0, reverse -> modules0) = break (\(l,insideComment) -> not insideComment && isImportLine l) (reverse rest)
-    nameLine =
-      head $
-      [l | (l, False) <- top, "module " `isPrefixOf` l] ++
-      ["Main"]
-    name = takeWhile (\x -> not (isSpace x || x == '(')) $ drop 7 nameLine
+    moduleLine =
+      findIndex (\(l,insideComment) -> not insideComment && isModuleLine l) contents'
+    firstImportLine =
+      findIndex (\(l, insideComment) -> not insideComment && isImportLine l) contents'
+    lastPragmaLine =
+      case takeWhile (\(_,(l, insideComment)) -> not insideComment && isPragmaLine l) (zip [(0::Int)..] contents') of
+        [] -> Nothing
+        xx -> Just $ fst $ last xx
+    (top, rest)
+      | Just l <- firstImportLine = splitAt (l-1) contents'
+      | Just m <- moduleLine      = splitAt (m+1) contents'
+      | Just p <- lastPragmaLine  = splitAt (p+1) contents'
+      | otherwise = ([], contents')
+    (reverse -> body0, reverse -> modules0) =
+      break (\(l,insideComment) -> not insideComment && isImportLine l) (reverse rest)
+    name
+      | Just l <- moduleLine
+      = takeWhile (\x -> not (isSpace x || x == '(')) $ drop 7 (fst $ contents' !! l)
+      | otherwise
+      = "Main"
     body = map fst $ dropWhile snd body0
     modules = map fst modules0 ++ map fst (takeWhile snd body0)
+
+isModuleLine :: String -> Bool
+isModuleLine l = "module " `isPrefixOf` l && all (\c -> isAlpha c || c `elem` " ().") l
+isImportLine :: String -> Bool
+isImportLine = ("import " `isPrefixOf`)
+isPragmaLine :: String -> Bool
+isPragmaLine = ("{-#" `isPrefixOf`)
 
 indent :: String -> String
 indent it@('#':_) = it
