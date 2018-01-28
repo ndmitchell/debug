@@ -70,8 +70,8 @@ pattern Config { excluded
   , _instrumentMain = (fromMaybe True -> instrumentMain)
   , _useHoedBackend = (fromMaybe False -> useHoedBackend)
   , _disablePartialTypeSignatureWarnings = (fromMaybe True -> disablePartialTypeSignatureWarnings)
-  , _enableExtendedDefaultingRules = (fromMaybe False -> enableExtendedDefaultingRules)
-  , _generateObservableInstances = (fromMaybe False -> generateObservableInstances)
+  , _enableExtendedDefaultingRules = (fromMaybe True -> enableExtendedDefaultingRules)
+  , _generateObservableInstances = (fromMaybe True -> generateObservableInstances)
   , _generateGenericInstances = (fromMaybe False -> generateGenericInstances)
   , _excludedFromInstanceGeneration = (fromMaybe [] -> excludedFromInstanceGeneration)
   , _verbose = (fromMaybe False -> verbose)
@@ -111,10 +111,10 @@ defConfig = unlines
   , "instrumentMain: true"
   , ""
   , "# When the Hoed backend is used, instruct the debug TH wrapper to insert Observable instances for types that derive Generic."
-  , "generateObservableInstances: false"
+  , "generateObservableInstances: true"
   , ""
   , "# When the Hoed backend is used, instruct the debug TH wrapper to insert Generic instances for types that don't derive Generic."
-  , "generateGenericInstances: true"
+  , "generateGenericInstances: false"
   , ""
   , "# If the hoed backend is used, insert the ExtendedDefaultRules pragma."
   , "enableExtendedDefaultingRules: true"
@@ -175,10 +175,11 @@ instrument Config {..} contents
       [ "{-# OPTIONS -Wno-partial-type-signatures #-}"
       | disablePartialTypeSignatureWarnings
       ] ++
-      ["{-# LANGUAGE ExtendedDefaultRules #-}" | enableExtendedDefaultingRules] ++
-      ["{-# LANGUAGE DeriveAnyClass #-}" | generateObservableInstances] ++
-      ["{-# LANGUAGE DerivingStrategies #-}" | generateObservableInstances] ++
-      ["{-# LANGUAGE DeriveGeneric #-}" | generateGenericInstances] ++ top
+      ["{-# LANGUAGE ExtendedDefaultRules #-}" | useHoedBackend && enableExtendedDefaultingRules] ++
+      ["{-# LANGUAGE DeriveAnyClass #-}"       | useHoedBackend && (generateObservableInstances || generateGenericInstances)] ++
+      ["{-# LANGUAGE DerivingStrategies #-}"   | useHoedBackend && (generateObservableInstances || generateGenericInstances)] ++
+      ["{-# LANGUAGE DeriveGeneric #-}"        | useHoedBackend && generateGenericInstances] ++
+      top
     body' =
       map
         (if instrumentMain
