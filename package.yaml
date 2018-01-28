@@ -19,7 +19,7 @@ library:
     dependencies: 
       - clock
       - debug
-      - Hoed >= 0.4.1
+      - Hoed >= 0.5
       - extra
       - hashable
       - libgraph >= 1.14
