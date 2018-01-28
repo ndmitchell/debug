@@ -70,8 +70,8 @@ pattern Config { excluded
   , _instrumentMain = (fromMaybe True -> instrumentMain)
   , _useHoedBackend = (fromMaybe False -> useHoedBackend)
   , _disablePartialTypeSignatureWarnings = (fromMaybe True -> disablePartialTypeSignatureWarnings)
-  , _enableExtendedDefaultingRules = (fromMaybe False -> enableExtendedDefaultingRules)
-  , _generateObservableInstances = (fromMaybe False -> generateObservableInstances)
+  , _enableExtendedDefaultingRules = (fromMaybe True -> enableExtendedDefaultingRules)
+  , _generateObservableInstances = (fromMaybe True -> generateObservableInstances)
   , _generateGenericInstances = (fromMaybe False -> generateGenericInstances)
   , _excludedFromInstanceGeneration = (fromMaybe [] -> excludedFromInstanceGeneration)
   , _verbose = (fromMaybe False -> verbose)
@@ -111,10 +111,10 @@ defConfig = unlines
   , "instrumentMain: true"
   , ""
   , "# When the Hoed backend is used, instruct the debug TH wrapper to insert Observable instances for types that derive Generic."
-  , "generateObservableInstances: false"
+  , "generateObservableInstances: true"
   , ""
   , "# When the Hoed backend is used, instruct the debug TH wrapper to insert Generic instances for types that don't derive Generic."
-  , "generateGenericInstances: true"
+  , "generateGenericInstances: false"
   , ""
   , "# If the hoed backend is used, insert the ExtendedDefaultRules pragma."
   , "enableExtendedDefaultingRules: true"
@@ -175,10 +175,11 @@ instrument Config {..} contents
       [ "{-# OPTIONS -Wno-partial-type-signatures #-}"
       | disablePartialTypeSignatureWarnings
       ] ++
-      ["{-# LANGUAGE ExtendedDefaultRules #-}" | enableExtendedDefaultingRules] ++
-      ["{-# LANGUAGE DeriveAnyClass #-}" | generateObservableInstances] ++
-      ["{-# LANGUAGE DerivingStrategies #-}" | generateObservableInstances] ++
-      ["{-# LANGUAGE DeriveGeneric #-}" | generateGenericInstances] ++ top
+      ["{-# LANGUAGE ExtendedDefaultRules #-}" | useHoedBackend && enableExtendedDefaultingRules] ++
+      ["{-# LANGUAGE DeriveAnyClass #-}"       | useHoedBackend && (generateObservableInstances || generateGenericInstances)] ++
+      ["{-# LANGUAGE DerivingStrategies #-}"   | useHoedBackend && (generateObservableInstances || generateGenericInstances)] ++
+      ["{-# LANGUAGE DeriveGeneric #-}"        | useHoedBackend && generateGenericInstances] ++
+      top
     body' =
       map
         (if instrumentMain
@@ -207,16 +208,35 @@ parseModule :: String -> ([String], String, [String], [String])
 parseModule contents = (map fst top, name, modules, body)
   where
     contents' = annotateBlockComments (lines contents)
-    isImportLine = ("import " `isPrefixOf`)
-    (top, rest) = break (\(l, insideComment) -> not insideComment && isImportLine l) contents'
-    (reverse -> body0, reverse -> modules0) = break (\(l,insideComment) -> not insideComment && isImportLine l) (reverse rest)
-    nameLine =
-      head $
-      [l | (l, False) <- top, "module " `isPrefixOf` l] ++
-      ["Main"]
-    name = takeWhile (\x -> not (isSpace x || x == '(')) $ drop 7 nameLine
+    moduleLine =
+      findIndex (\(l,insideComment) -> not insideComment && isModuleLine l) contents'
+    firstImportLine =
+      findIndex (\(l, insideComment) -> not insideComment && isImportLine l) contents'
+    lastPragmaLine =
+      case takeWhile (\(_,(l, insideComment)) -> not insideComment && isPragmaLine l) (zip [(0::Int)..] contents') of
+        [] -> Nothing
+        xx -> Just $ fst $ last xx
+    (top, rest)
+      | Just l <- firstImportLine = splitAt (l-1) contents'
+      | Just m <- moduleLine      = splitAt (m+1) contents'
+      | Just p <- lastPragmaLine  = splitAt (p+1) contents'
+      | otherwise = ([], contents')
+    (reverse -> body0, reverse -> modules0) =
+      break (\(l,insideComment) -> not insideComment && isImportLine l) (reverse rest)
+    name
+      | Just l <- moduleLine
+      = takeWhile (\x -> not (isSpace x || x == '(')) $ drop 7 (fst $ contents' !! l)
+      | otherwise
+      = "Main"
     body = map fst $ dropWhile snd body0
     modules = map fst modules0 ++ map fst (takeWhile snd body0)
+
+isModuleLine :: String -> Bool
+isModuleLine l = "module " `isPrefixOf` l && all (\c -> isAlpha c || c `elem` " ().") l
+isImportLine :: String -> Bool
+isImportLine = ("import " `isPrefixOf`)
+isPragmaLine :: String -> Bool
+isPragmaLine = ("{-#" `isPrefixOf`)
 
 indent :: String -> String
 indent it@('#':_) = it
