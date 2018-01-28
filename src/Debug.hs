@@ -106,11 +106,6 @@ data HoedCallDetails = HoedCallDetails
   , depends, parents :: ![HoedCallKey]
   } deriving (Eq, Generic, Hashable)
 
-instance Hashable Vertex where
-  hashWithSalt s RootVertex    = s `hashWithSalt` (-1 :: Int)
-  hashWithSalt s (Vertex cs _) = s `hashWithSalt` cs
-instance Hashable CompStmt where
-  hashWithSalt s cs = hashWithSalt s (stmtIdentifier cs)
 
 ---------------------------------------------------------------------------
 -- Cached pred and succ relationships
