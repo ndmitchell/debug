@@ -137,6 +137,7 @@ function showCalls()
     for (var i = 0; i < trace.calls.length; i++)
     {
         var msg = renderCall(i);
+        if (name != "(All)" && name != trace.functions[trace.calls[i][""]].name) continue;
         if (!regex.test(msg)) continue;
         ul.append($("<li><a href='javascript:showCall(" + i + ")'>" + escapeHTML(msg) + "</a></li>"));
     }
