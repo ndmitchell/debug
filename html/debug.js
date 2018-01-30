@@ -146,7 +146,7 @@ function init()
 {
     var funcNames = [];
     for (var i = 0; i < trace.functions.length; i++)
-        if(!funcNames.includes(trace.functions[i].name))
+        if (funcNames.indexOf(trace.functions[i].name) === -1)
             funcNames.push(trace.functions[i].name);
     funcNames = funcNames.sort();
     var drop = $("#function-drop");
