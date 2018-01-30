@@ -1,7 +1,7 @@
 :set -hide-packageansi-wl-pprint
 :set -fwarn-incomplete-patterns
 :set -fwarn-unused-binds -fwarn-unused-imports -fwarn-orphans
-:set -isrc
+:set -isrc;test
 :load test/Main.hs src/Paths.hs
 
 :def docs_ const $ return $ unlines [":!cabal haddock"]
