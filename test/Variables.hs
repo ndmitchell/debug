@@ -122,7 +122,7 @@ example name expr = do
     debugSave $ "output" </> name <.> "html"
     -- see https://github.com/feuerbach/ansi-terminal/issues/47 as this test fails on Appveyor
     -- can remove once ansi-terminal-0.8 is available in Stackage LTS (which will be v11)
-    try_ debugPrint
+    debugPrint
     putStrLn "\n\n"
 
 main = do
