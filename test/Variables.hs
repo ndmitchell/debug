@@ -104,6 +104,52 @@ debug [d|
 --      : = [2,2,3,4,5,6]
 --      $result = [2,2,3,4,5,6]
 
+debug [d|
+    twoXs :: [Int] -> [Int] -> [Int]
+    twoXs x y =
+        case x of
+            x : xs -> f x : xs ++ y
+            [] -> y
+--  expected:
+--      $arg1 = [2,3,4]
+--      $arg2 = [7,8,9]
+--      $result = [5,3,4,7,8,9]
+--      ++ = [3,4,7,8,9]
+--      : = [5,3,4,7,8,9]
+--      f = 5
+--      x = [2,3,4]
+--      x' = 2
+--      xs = [3,4]
+--      y = [7,8,9]
+    |]
+
+debug [d|
+    --barely comprehensible test with multiple values for x and xs
+    manyXs :: [Int] -> [Int] -> [Int]
+    manyXs x y =
+        case x of
+            x : xs ->
+                f x : case xs of
+                    x : xs -> f x : xs ++ y
+                    [] -> y
+            [] -> y
+-- expected
+--      $arg1 [2, 3, 4]
+--      $arg2 [7 ,8 , 9]
+--      $result	[5, 7, 4, 7, 8, 9]
+--      ++	[4, 7, 8, 9]
+--      :	[7, 4, 7, 8, 9]
+--      :'  [5, 7, 4, 7, 8, 9]
+--      f	5
+--      f'  7
+--      x	[2, 3, 4]
+--      x'	2
+--      x''	3
+--      xs	[3, 4]
+--      xs'	[4]
+--      y	[7, 8, 9]
+    |]
+
 explicit :: (Ord a, Show a) => [a] -> [a]
 explicit = quicksort'
     where
