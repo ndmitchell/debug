@@ -42,7 +42,6 @@ library
         containers,
         aeson,
         containers,
-        filepath,
         ghc-prim,
         Hoed >= 0.5,
         libgraph >= 1.14,
