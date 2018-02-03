@@ -214,9 +214,7 @@ unShadowName ioRef t = do
             let max = maximum lengths
             let maxName = fst $ fromJust $ find (\p -> snd p == max) zipped
             return $ maxName `T.append` "'"
-        else do
-            putStrLn $ "No match for: " ++ show t
-            return t
+        else return t
 
 -- | Is the second string equal to the first plus some number of ' (prime) characters?
 -- | e.g. x `isPrefixPrime` x' == true, x isPrefixPrime x'' == True, but x isPrefixPrime xs == False
