@@ -95,16 +95,16 @@ debug [d|
             [] -> zs
     |]
 --  expected:
---      $arg1 = [2, 3, 4]
---      $arg2 = [7, 8, 9]
---      $result = [5, 3, 4, 7, 8, 9]
---      ++ = [3, 4, 7, 8, 9]
---      : = [5, 3, 4, 7, 8, 9]
+--      $arg1 = [2,3,4]
+--      $arg2 = [7,8,9]
+--      $result = [5,3,4,7,8,9]
+--      ++ = [3,4,7,8,9]
+--      : = [5,3,4,7,8,9]
 --      f = 5
 --      x = 2
---      xs = [3, 4]
---      ys = [2, 3, 4]
---      zs = [7, 8, 9]
+--      xs = [3,4]
+--      ys = [2,3,4]
+--      zs = [7,8,9]
 
 debug [d|
     twoXs :: [Int] -> [Int] -> [Int]
@@ -113,16 +113,16 @@ debug [d|
             x : xs -> f x : xs ++ y
             [] -> y
 --  expected:
---      $arg1 = [2, 3, 4]
---      $arg2 = [7, 8, 9]
---      $result = [5, 3, 4, 7, 8, 9]
---      ++ = [3, 4, 7, 8, 9]
---      : = [5, 3, 4, 7, 8, 9]
+--      $arg1 = [2,3,4]
+--      $arg2 = [7,8,9]
+--      $result = [5,3,4,7,8,9]
+--      ++ = [3,4,7,8,9]
+--      : = [5,3,4,7,8,9]
 --      f = 5
---      x = [2, 3, 4]
+--      x = [2,3,4]
 --      x' = 2
---      xs = [3, 4]
---      y = [7, 8, 9]
+--      xs = [3,4]
+--      y = [7,8,9]
     |]
 
 debug [d|
@@ -137,24 +137,20 @@ debug [d|
             [] -> y
     |]
 -- expected
---      $arg1 [2, 3, 4]
---      $arg2 [7 ,8 , 9]
---      $result	[5, 7, 4, 7, 8, 9]
---      ++	[4, 7, 8, 9]
---      :	[5, 7, 4, 7, 8, 9]
---      :'  [7, 4, 7, 8, 9]
+--      $arg1 [2,3,4]
+--      $arg2 [7,8,9]
+--      $result	[5,7,4,7,8,9]
+--      ++	[4,7,8,9]
+--      :	[5,7,4,7,8,9]
+--      :'  [7,4,7,8,9]
 --      f	5
 --      f'  7
---      x	[2, 3, 4]
+--      x	[2,3,4]
 --      x'	2
 --      x''	3
---      xs	[3, 4]
+--      xs	[3,4]
 --      xs'	[4]
---      y	[7, 8, 9]
-
-l1, l2 :: [Int]
-l1 = [2, 3, 4]
-l2 = [7, 8, 9]
+--      y	[7,8,9]
 
 explicit :: (Ord a, Show a) => [a] -> [a]
 explicit = quicksort'
@@ -183,7 +179,9 @@ main = do
     example "quicksortBy" $ quicksortBy (<) "haskell"
     example "lcm_gcd" $ lcm_gcd 6 15
     example "lcm_gcd_log" $ lcm_gcd_log 6 15
-    example "case_test" $ case_test [1, 2, 3] [4, 5, 6]
+    example "case_test" $ case_test [2,3,4] [7,8,9]
+    example "twoXs" $ twoXs [2,3,4] [7,8,9]
+    example "manyXs" $ manyXs [2,3,4] [7,8,9]
     example "explicit" $ explicit "haskell"
     copyFile "output/quicksort.js" "trace.js" -- useful for debugging the HTML
 
@@ -193,9 +191,9 @@ main = do
     let a === b = if a == b then putStr "." else fail $ show (a, "/=", b)
     removeExtraDigits "_quicksort_0" === "_quicksort"
     removeLet let0 === "f"
-    removeLet let1 === "select_2'"
-    removeLet let2 === "Data.Foldable.foldr'"
-    removeLet let3 === "Data.Foldable.foldr''"
+    removeLet let1 === "select_2"
+    removeLet let2 === "Data.Foldable.foldr"
+    removeLet let3 === "Data.Foldable.foldr"
     mkLegalInfixVar "+" === "plus"
     mkLegalInfixVar "<!>" === "lt_bang_gt"
     mkLegalInfixVar "`lcd`" === "lcd"
