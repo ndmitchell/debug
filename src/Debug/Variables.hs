@@ -195,9 +195,10 @@ funInfo info f = unsafePerformIO $ do
 -- | Used in conjunction with 'fun' to annotate variables. See 'fun' for an example.
 var :: Show a => Call -> String -> a -> a
 var (Call _ ref) name val = unsafePerformIO $ do
-    var <- atomicModifyIORef refVariables $ addVariable val
-    name' <- unShadowName ref $ pack name
-    atomicModifyIORef ref $ \v -> ((name', var) :v, ())
+    when (show val /= "<function>") $ do -- these make the variable list long without providing useful info
+        var <- atomicModifyIORef refVariables $ addVariable val
+        name' <- unShadowName ref $ pack name
+        atomicModifyIORef ref $ \v -> ((name', var) :v, ())
     return val
 
 -- | If a name is already being used, find the next available name by adding ' (prime) chars until
@@ -212,7 +213,6 @@ unShadowName ioRef t = do
             let zipped = zip matches lengths
             let max = maximum lengths
             let maxName = fst $ fromJust $ find (\p -> snd p == max) zipped
-            putStrLn $ (show t) ++ " match, replaced with: " ++ show (maxName `T.append` "'")
             return $ maxName `T.append` "'"
         else do
             putStrLn $ "No match for: " ++ show t
