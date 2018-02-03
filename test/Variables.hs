@@ -51,16 +51,16 @@ debug [d|
         in fromIntegral least ^^ gcd x y
     |]
 --  expected:
---      x, $arg1 = 6
---      y, $arg2 = 15
+--      $arg1 = 6
+--      $arg2 = 15
 --      $result = 27000.0
 --      ^^ = 27000.0
 --      fromIntegral = 30.0
---      gcd = <function>
---      gcd' = 3
---      lcm = <function>
---      lcm' = 30
+--      gcd = 3
+--      lcm = 30
 --      least = 30
+--      x = 6
+--      y = 15
 
 debug [d|
     lcm_gcd_log :: Int -> Int -> Float
@@ -70,23 +70,23 @@ debug [d|
         in logBase base val ** base
     |]
 --  expected:
---      $arg1, x = 6
---      $arg2, y = 15
+--      $arg1 = 6
+--      $arg2 = 15
 --      $result = 27.0
 --      ** = 27.0
 --      - = 27.0
 --      base = 3.0
 --      fromIntegral = 30.0
---      gcd = <function>
---      gcd' = 3
+--      gcd = 3
 --      lcm = 30
---      logBase = <function>
---      logBase' = 3.0
+--      logBase = 3.0
 --      val = 27.0
+--      x = 6
+--      y = 15
 
 debug [d|
     f :: Int -> Int
-    f = (2*)
+    f n = (2 * n) + 1
 
     case_test :: [Int] -> [Int] -> [Int]
     case_test ys zs =
@@ -95,14 +95,62 @@ debug [d|
             [] -> zs
     |]
 --  expected:
---      ys, $arg1 = [1,2,3]
---      zs, $arg2 = [4,5,6]
---      x = 1
---      xs = [2,3]
---      f = 2
---      ++ = [2,3,4,5,6]
---      : = [2,2,3,4,5,6]
---      $result = [2,2,3,4,5,6]
+--      $arg1 = [2,3,4]
+--      $arg2 = [7,8,9]
+--      $result = [5,3,4,7,8,9]
+--      ++ = [3,4,7,8,9]
+--      : = [5,3,4,7,8,9]
+--      f = 5
+--      x = 2
+--      xs = [3,4]
+--      ys = [2,3,4]
+--      zs = [7,8,9]
+
+debug [d|
+    twoXs :: [Int] -> [Int] -> [Int]
+    twoXs x y =
+        case x of
+            x : xs -> f x : xs ++ y
+            [] -> y
+--  expected:
+--      $arg1 = [2,3,4]
+--      $arg2 = [7,8,9]
+--      $result = [5,3,4,7,8,9]
+--      ++ = [3,4,7,8,9]
+--      : = [5,3,4,7,8,9]
+--      f = 5
+--      x = [2,3,4]
+--      x' = 2
+--      xs = [3,4]
+--      y = [7,8,9]
+    |]
+
+debug [d|
+    --barely comprehensible test with multiple values for x and xs
+    manyXs :: [Int] -> [Int] -> [Int]
+    manyXs x y =
+        case x of
+            x : xs ->
+                f x : case xs of
+                    x : xs -> f x : xs ++ y
+                    [] -> y
+            [] -> y
+    |]
+-- expected
+--      $arg1 [2,3,4]
+--      $arg2 [7,8,9]
+--      $result	[5,7,4,7,8,9]
+--      ++	[4,7,8,9]
+--      :	[5,7,4,7,8,9]
+--      :'  [7,4,7,8,9]
+--      f	5
+--      f'  7
+--      x	[2,3,4]
+--      x'	2
+--      x''	3
+--      xs	[3,4]
+--      xs'	[4]
+--      y	[7,8,9]
 
 explicit :: (Ord a, Show a) => [a] -> [a]
 explicit = quicksort'
@@ -131,7 +179,9 @@ main = do
     example "quicksortBy" $ quicksortBy (<) "haskell"
     example "lcm_gcd" $ lcm_gcd 6 15
     example "lcm_gcd_log" $ lcm_gcd_log 6 15
-    example "case_test" $ case_test [1, 2, 3] [4, 5, 6]
+    example "case_test" $ case_test [2,3,4] [7,8,9]
+    example "twoXs" $ twoXs [2,3,4] [7,8,9]
+    example "manyXs" $ manyXs [2,3,4] [7,8,9]
     example "explicit" $ explicit "haskell"
     copyFile "output/quicksort.js" "trace.js" -- useful for debugging the HTML
 
@@ -141,9 +191,9 @@ main = do
     let a === b = if a == b then putStr "." else fail $ show (a, "/=", b)
     removeExtraDigits "_quicksort_0" === "_quicksort"
     removeLet let0 === "f"
-    removeLet let1 === "select_2'"
-    removeLet let2 === "Data.Foldable.foldr'"
-    removeLet let3 === "Data.Foldable.foldr''"
+    removeLet let1 === "select_2"
+    removeLet let2 === "Data.Foldable.foldr"
+    removeLet let3 === "Data.Foldable.foldr"
     mkLegalInfixVar "+" === "plus"
     mkLegalInfixVar "<!>" === "lt_bang_gt"
     mkLegalInfixVar "`lcd`" === "lcd"
