@@ -195,9 +195,30 @@ funInfo info f = unsafePerformIO $ do
 -- | Used in conjunction with 'fun' to annotate variables. See 'fun' for an example.
 var :: Show a => Call -> String -> a -> a
 var (Call _ ref) name val = unsafePerformIO $ do
-    var <- atomicModifyIORef refVariables $ addVariable val
-    atomicModifyIORef ref $ \v -> ((T.pack name, var) :v, ())
+    when (show val /= "<function>") $ do -- these make the variable list long without providing useful info
+        var <- atomicModifyIORef refVariables $ addVariable val
+        name' <- unShadowName ref $ pack name
+        atomicModifyIORef ref $ \v -> ((name', var) :v, ())
     return val
+
+-- | If a name is already being used, find the next available name by adding ' (prime) chars until
+--   the resulting name is unique
+unShadowName :: IORef [(Text, Var)] -> Text -> IO Text
+unShadowName ioRef t = do
+    pairs <- readIORef ioRef
+    let matches = filter (isPrefixPrime t) $ map fst pairs
+    if not (null matches)
+        then do
+            let lengths = map T.length matches
+            let zipped = zip matches lengths
+            let maxName = fst $ fromJust $ find (\p -> snd p == maximum lengths) zipped
+            return $ maxName `T.append` "'"
+        else return t
+
+-- | Is the second string equal to the first plus some number of ' (prime) characters?
+-- | e.g. x `isPrefixPrime` x' == true, x isPrefixPrime x'' == True, but x isPrefixPrime xs == False
+isPrefixPrime :: Text -> Text -> Bool
+isPrefixPrime s t = s == T.dropWhileEnd (== '\'') t
 
 -- | A @TemplateHaskell@ wrapper to convert a normal function into a traced function.
 --   For an example see "Debug". Inserts 'funInfo' and 'var' calls.
