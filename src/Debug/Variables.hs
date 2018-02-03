@@ -211,8 +211,7 @@ unShadowName ioRef t = do
         then do
             let lengths = map T.length matches
             let zipped = zip matches lengths
-            let max = maximum lengths
-            let maxName = fst $ fromJust $ find (\p -> snd p == max) zipped
+            let maxName = fst $ fromJust $ find (\p -> snd p == maximum lengths) zipped
             return $ maxName `T.append` "'"
         else return t
 
