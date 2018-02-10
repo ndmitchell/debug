@@ -13,6 +13,8 @@ import Control.Exception.Extra
 import System.Directory
 import System.FilePath
 
+--TODO: remove this before PR
+import Debug.DebugTrace
 
 debug [d|
    quicksort :: Ord a => [a] -> [a]
@@ -173,16 +175,32 @@ example name expr = do
     try_ debugPrint
     putStrLn "\n\n"
 
+checkVars name expr = do
+    _ <- return ()
+    putStrLn $ "CheckVars for " ++ name
+    debugClear
+    print expr
+    putStrLn "Calling debugPrint"
+    try_ debugPrint
+
+    --debugPrint = getDebugTrace >>= debugPrintTrace
+
+--TODO: replace the uncommented code before PR
 main = do
     createDirectoryIfMissing True "output"
+    {-
     example "quicksort" $ quicksort "haskell"
     example "quicksortBy" $ quicksortBy (<) "haskell"
-    example "lcm_gcd" $ lcm_gcd 6 15
+    -}
+    --example "lcm_gcd" $ lcm_gcd 6 15
+    checkVars "lcm_gcd" $ lcm_gcd 6 15
+    {-
     example "lcm_gcd_log" $ lcm_gcd_log 6 15
     example "case_test" $ case_test [2,3,4] [7,8,9]
     example "twoXs" $ twoXs [2,3,4] [7,8,9]
     example "manyXs" $ manyXs [2,3,4] [7,8,9]
     example "explicit" $ explicit "haskell"
+    -}
     copyFile "output/quicksort.js" "trace.js" -- useful for debugging the HTML
 
     evaluate type1

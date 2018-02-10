@@ -59,6 +59,8 @@ module Debug.Variables(
     debugJSON,
     debugView,
     debugSave,
+    DebugTrace(..),
+    getDebugTrace,
     -- * Recording
     funInfo, fun, var,
     ) where
