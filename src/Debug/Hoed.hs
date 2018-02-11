@@ -312,7 +312,7 @@ debug' Config{..} q = do
        --      which is then unpacked by 'convert'
       createLabel n dec = nameBase n ++ "\n" ++ prettyPrint dec
 
-#if __GLASGOW_HASKELL__ >= 820
+#if __GLASGOW_HASKELL__ >= 802
       excludedSet = Set.fromList excludeFromInstanceGeneration
       updateDerivs derivs
         | hasGenericInstance <- not $ null $ filterDerivingClausesByName ''Generic derivs
@@ -353,7 +353,7 @@ debug' Config{..} q = do
             let ty' = adjustTy ty
             ty'' <- renameForallTyVars ty'
             return [SigD n ty', SigD n' ty'']
-#if __GLASGOW_HASKELL__ >= 820
+#if __GLASGOW_HASKELL__ >= 802
         DataD cxt1 name tt k cons derivs
           | not $ Set.member (prettyPrint name) excludedSet
           -> return [DataD cxt1 name tt k cons $ updateDerivs derivs]
