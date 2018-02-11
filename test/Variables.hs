@@ -2,10 +2,15 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
+{-# LANGUAGE OverloadedStrings #-}
 -- {-# OPTIONS_GHC -dth-dec-file #-} -- turn on to debug TH
 
 module Variables(main) where
 
+import Control.Monad
+import Data.Text (Text, pack, unpack)
+import qualified Data.Text as T
+import Data.Tuple.Extra
 import Debug
 import Debug.Util
 import Data.List
@@ -52,6 +57,19 @@ debug [d|
         let least = lcm x y
         in fromIntegral least ^^ gcd x y
     |]
+
+lcm_gcd_vars :: [(Text, Text)]
+lcm_gcd_vars =
+    [ ("$arg1", "6")
+    , ("$arg2", "15")
+    , ("$result", "27000.0")
+    , ("^^", "27000.0")
+    , ("fromIntegral", "30.0")
+    , ("gcd", "3")
+    , ("lcm", "30")
+    , ("least", "30")
+    , ("x", "6")
+    , ("y", "15") ]
 --  expected:
 --      $arg1 = 6
 --      $arg2 = 15
@@ -162,7 +180,6 @@ explicit = quicksort'
         quicksort'' t ((var t "x" -> x):(var t "xs" -> xs)) = quicksort' lt ++ [x] ++ quicksort' gt
             where (var t "lt" -> lt, var t "gt" -> gt) = partition (<= x) xs
 
-
 example name expr = do
     _ <- return ()
     putStrLn $ "Testing " ++ name
@@ -175,15 +192,40 @@ example name expr = do
     try_ debugPrint
     putStrLn "\n\n"
 
+checkVars :: Show a => String -> a -> IO ()
 checkVars name expr = do
     _ <- return ()
-    putStrLn $ "CheckVars for " ++ name
+    putStrLn $ "Checking the variables for " ++ name
     debugClear
     print expr
-    putStrLn "Calling debugPrint"
-    try_ debugPrint
+    trace <- getDebugTrace
+    let varList = map (first funName) $ getTraceVars trace
+    case lookup (pack name) varList of
+        Nothing -> fail $ "Cant find the function " ++ name ++ " in the trace"
+        Just vars ->
+            case lookup name expectedVars of
+                Nothing -> fail $ "Can't find the list of expected variables for the function " ++ name
+                Just expected -> case checkEachVar vars expected of
+                    [] -> do
+                        when (length vars /= length expected) $
+                            fail $ "Expected " ++ show (length expected) ++ " variables, but found " ++ show (length vars)
+                        putStrLn "Ya"
+                        return ()
+                    xs -> fail $ "\n" ++ unlines xs
 
-    --debugPrint = getDebugTrace >>= debugPrintTrace
+checkEachVar :: [(Text, Text)] -> [(Text, Text)] -> [String]
+checkEachVar vars expected = foldr f [] vars where
+    f :: (Text, Text) -> [String] -> [String]
+    f (key, val) acc =
+        case lookup key expected of
+            Nothing -> ("Couldn't find the variable " ++ T.unpack key ++ " in the expected results") : acc
+            Just v -> if v /= val
+                then ("Expected " ++ unpack val ++ " but got " ++ unpack v ++ " for the variable " ++ unpack key) : acc
+                else acc
+
+expectedVars :: [(String, [(Text, Text)])]
+expectedVars = [("lcm_gcd", lcm_gcd_vars)]
+
 
 --TODO: replace the uncommented code before PR
 main = do

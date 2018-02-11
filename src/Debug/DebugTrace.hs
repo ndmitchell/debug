@@ -19,7 +19,8 @@ module Debug.DebugTrace(
     debugPrintTrace,
     debugJSONTrace,
     debugViewTrace,
-    debugSaveTrace
+    debugSaveTrace,
+    getTraceVars
     ) where
 
 import Control.DeepSeq
@@ -64,15 +65,20 @@ data Function = Function
 instance Hashable Function
 instance NFData Function
 
+-- | Along with the function metatdata, get a list of the variable names and string values from the trace
+getTraceVars :: DebugTrace -> [(Function, [(Text, Text)])]
+getTraceVars DebugTrace{..} =
+    let lookupFun = (V.fromList functions V.!)
+        lookupVar = (V.fromList variables V.!)
+    in [ (lookupFun callFunctionId, map (second lookupVar) callVals)
+       | CallData{..} <- calls ]
+
 -- | Print information about the observed function calls to 'stdout',
 --   in a human-readable format.
 debugPrintTrace :: DebugTrace -> IO ()
-debugPrintTrace DebugTrace{..} = do
-    let lookupFun = (V.fromList functions V.!)
-        lookupVar = (V.fromList variables V.!)
-        concs = [(lookupFun callFunctionId, map (second lookupVar) callVals)
-                | CallData{..} <- calls]
-        docs = map call $ nubOrd $ reverse concs
+debugPrintTrace trace@DebugTrace{..} = do
+    let concs = getTraceVars trace
+    let docs = map call $ nubOrd $ reverse concs
     putDoc (vcat docs <> hardline)
     where
           call :: (Function, [(Text, Text)]) -> Doc
@@ -80,7 +86,6 @@ debugPrintTrace DebugTrace{..} = do
                    let ass = vs
                        hdr = bold $ header ass f
                    in hang 5 $ hdr <$$> body ass
-
 
           header :: [(Text, Text)] -> Function -> Doc
           header ass f = "\n*"       <+>
