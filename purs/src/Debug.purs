@@ -5,37 +5,29 @@ import Data.Foreign.Index
 import Data.Foreign.Keys
 import Prelude
 
-import Control.Alt (class Alt)
-import Control.Alternative (class Alternative, class Plus, empty)
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE, logShow)
+import Control.Monad.Eff.Exception (EXCEPTION, error, throwException)
 import Control.Monad.Eff.JQuery (JQuery, clear, create, on, ready, select)
 import Control.Monad.Eff.JQuery as JQuery
-import Control.Monad.Error.Class (class MonadThrow)
-import Control.Monad.Except (ExceptT, except, lift, mapExceptT, runExcept, runExceptT, throwError)
-import Control.Monad.Trans.Class (class MonadTrans)
-import Control.MonadPlus (class MonadZero, guard)
+import Control.Monad.Except (runExcept)
+import Control.MonadPlus (guard)
 import DOM (DOM)
 import Data.Array (init, sortWith, unsafeIndex, (!!), (..), (:))
 import Data.Array as Array
-import Data.Bifunctor (lmap)
-import Data.Either (Either, either, fromRight)
+import Data.Either (either, fromRight)
 import Data.Foldable (findMap)
 import Data.Foreign.Class (class Decode, decode)
-import Data.Identity (Identity(..))
 import Data.List (List(..), foldM, reverse)
-import Data.List.NonEmpty (NonEmptyList, singleton)
+import Data.List.NonEmpty (NonEmptyList)
 import Data.Maybe (Maybe(..), fromJust, fromMaybe, maybe)
-import Data.Newtype (class Newtype, over, un)
 import Data.Set (fromFoldable)
 import Data.String (Pattern(..), drop, indexOf, joinWith)
 import Data.String as String
 import Data.String.Regex (Regex, match, regex, test)
 import Data.String.Regex.Flags (global, noFlags)
-import Data.Traversable (class Traversable, for, for_, sequence)
-import Partial.Unsafe (unsafePartial, unsafePartialBecause)
+import Data.Traversable (for, for_)
+import Partial.Unsafe (unsafePartial)
 
---------------------------------------------------
 -- Foreign imports
 
 -- | The debugging trace
@@ -61,15 +53,12 @@ type DebugTrace =
 
 newtype CallData = CallData Foreign
 
-instance callDataShow :: Show CallData where
-  show cdata = either show id $ runE $ renderCall cdata
-
 getArg :: String -> CallData -> Maybe String
-getArg k (CallData f) = either (const Nothing) Just $ runE $ do
-  ix <- liftF f k $ decode =<< index f k
-  fromMaybeE (VariableIndexError ix) $ trace.variables !! ix
+getArg k (CallData f) = join $ either (const Nothing) Just $ runExcept $ do
+  ix <- decode =<< index f k
+  pure $ trace.variables !! ix
 
-callDepends :: forall m . Monad m => CallData -> E m (Array {ix::Int,val::CallData})
+callDepends :: forall m . CallData -> E m (Array {ix::Int,val::CallData})
 callDepends (CallData f)
   | hasProperty "$depends" f = do
     ixes <- liftF f "depends" $ decode =<< index f "$depends"
@@ -78,7 +67,7 @@ callDepends (CallData f)
                       pure {ix: ix, val: val}
   | otherwise = pure []
 
-callParents :: forall m . Monad m => CallData -> E m (Array {ix::Int,val::CallData})
+callParents :: forall m . CallData -> E m (Array {ix::Int,val::CallData})
 callParents (CallData f)
   | hasProperty "$parents" f = do
     ixes <- liftF f "parents" $ decode =<< index f "$parents"
@@ -87,19 +76,18 @@ callParents (CallData f)
                       pure {ix: ix, val: val}
   | otherwise = pure []
 
-callVals :: forall m . Monad m => CallData -> E m (Array {name::String, value::String})
+callVals :: forall m . CallData -> E m (Array {name::String, value::String})
 callVals (CallData f) = do
   kk <- liftF f "call data" $ keys f
-  embedE $ do
-    k <- lift kk
-    lift $ guard (k /= "" && k /= "$parents" && k /= "$depends" )
+  let val_kks = Array.filter (\k -> k /= "" && k /= "$parents" && k /= "$depends" ) kk
+  for val_kks $ \k -> do
     kv <- liftF f ("call " <> k) $ f!k
     ix <- decodeE k kv
     arg <- maybe (throwE $ VariableIndexError ix) pure
            $ trace.variables !! ix
     pure {name: k, value: arg}
 
-callFunction :: forall m . Monad m => CallData -> E m DebugFunction
+callFunction :: forall m . CallData -> E m DebugFunction
 callFunction (CallData f) = do
   funId <- liftF f "call function" $ readInt =<< index f ""
   case trace.functions !! funId of
@@ -107,15 +95,15 @@ callFunction (CallData f) = do
     Nothing -> throwE (FunctionIndexError funId)
 
 -- | Returns the call stack upwards from the given call
-getCallStack :: forall m . Monad m => {ix::Int,val::CallData} -> E m (List {ix::Int,val::CallData})
+getCallStack :: forall m . {ix::Int,val::CallData} -> E m (List {ix::Int,val::CallData})
 getCallStack x = do
   pars <- callParents x.val
   case pars of
     [p] -> (Cons p) <$> getCallStack p
     []  -> pure Nil
-    _   -> throwError (singleton $ MoreThanOneParent x.ix)
+    _   -> throwE (MoreThanOneParent x.ix)
 
-renderCall :: forall m . Monad m => CallData -> E m String
+renderCall :: forall m . CallData -> E m String
 renderCall c = do
   fun  <- callFunction c
   vals <- callVals c
@@ -124,9 +112,9 @@ renderCall c = do
   pure $ joinWith " " $
     fun.name : map findArg fun.arguments <> [" = ", findArg fun.result]
 
-matchCalls :: forall m . Monad m =>
+matchCalls :: forall m .
               String -> String -> E m (Array {index::Int, rendered::String} )
-matchCalls name regexp = embedE $ do
+matchCalls name regexp = do
   let nameMatch
         | name == "(All)" = \_ -> pure true
         | otherwise = \c -> do
@@ -134,18 +122,18 @@ matchCalls name regexp = embedE $ do
           pure (name == fun.name)
       regexpMatch :: String -> Boolean
       regexpMatch = either (\_ _ -> false) test $ regex regexp noFlags
-  i  <- lift $ unsafePartial $ fromJust $ init $ 0 .. (Array.length trace.calls)
-  let c = unsafePartial $ unsafeIndex trace.calls i
-  nc <- nameMatch c
-  guard nc
-  rc <- renderCall c
-  guard (regexpMatch rc)
-  pure {index:i, rendered:rc}
+  let indexes = unsafePartial $ fromJust $ init $ 0 .. (Array.length trace.calls)
+  map Array.catMaybes $ for indexes $ \i -> do
+    let c = unsafePartial $ unsafeIndex trace.calls i
+    ifM (nameMatch c)
+      (do rc <- renderCall c
+          pure $ if (regexpMatch rc) then Just {index:i, rendered:rc} else Nothing)
+      (pure Nothing)
 
 -----------------------------------------------------------------------
 -- DOM manipulation
 
-main :: forall eff . Eff (console :: CONSOLE, dom :: DOM | eff) Unit
+main :: forall eff . Eff (exception :: EXCEPTION, dom :: DOM | eff) Unit
 main = ready $ do
   let funcNames = fromFoldable $ map (_.name) trace.functions
   drop <- select "#function-drop"
@@ -155,12 +143,12 @@ main = ready $ do
     JQuery.append opt drop
 
   let showCalls = attempt $ do
-        name    <- decodeE "name"   =<< lift (JQuery.getValue drop)
-        regexp  <- decodeE "regexp" =<< lift (JQuery.getValue text)
+        name    <- decodeE "name"   =<< JQuery.getValue drop
+        regexp  <- decodeE "regexp" =<< JQuery.getValue text
         matches <- matchCalls name regexp
-        list    <- lift $ select "#function-list"
-        lift $ clear list
-        for_ matches $ \x -> lift $ do
+        list    <- select "#function-list"
+        clear list
+        for_ matches $ \x -> do
           li <- create $ "<li>" <> mkCallLink x <> "</li>"
           JQuery.append li list
 
@@ -177,9 +165,9 @@ hsLexer = unsafePartial fromRight
 symbols :: String
 symbols = """->:=()[]"""
 
-showSource :: forall eff. JQuery -> CallData -> E (Eff (dom :: DOM | eff)) Unit
+showSource :: forall eff. JQuery -> CallData -> E (dom :: DOM | eff) Unit
 showSource dom c = do
-  lift $ clear dom
+  clear dom
   fun <- callFunction c
   let loop src = do
         case match hsLexer src of
@@ -199,36 +187,36 @@ showSource dom c = do
              loop $ drop (String.length m) src
           _ ->
             JQuery.appendText src dom
-  lift $ loop fun.source
+  loop fun.source
 
-showCall :: forall eff. Int -> Eff (console :: CONSOLE, dom :: DOM | eff) Unit
+showCall :: forall eff. Int -> Eff (exception :: EXCEPTION, dom :: DOM | eff) Unit
 showCall n = attempt $ do
   c   <- fromMaybeE (CallIndexError n) $ trace.calls !! n
   fun <- callFunction c
 
-  source <- lift $ select "#function-source"
+  source <- select "#function-source"
   showSource source c
 
-  variables <- lift $ select "#function-variables"
-  lift $ clear variables
+  variables <- select "#function-variables"
+  clear variables
   vals <- callVals c
-  lift $ for_ (sortWith (_.name) vals) \v -> do
+  for_ (sortWith (_.name) vals) \v -> do
     el <- create $ "<li><pre>" <> v.name <> " = " <> escapeHTML v.value <> "</pre></li>"
     JQuery.append el variables
 
   deps <- callDepends c
   pars <- callParents c
-  callstackSection <- lift $ select "#function-depends-section"
-  cursor <- lift $ select "#function-depends"
-  lift $ clear cursor
-  lift $ JQuery.hide callstackSection
+  callstackSection <- select "#function-depends-section"
+  cursor <- select "#function-depends"
+  clear cursor
+  JQuery.hide callstackSection
   when (Array.length deps > 0 || Array.length pars > 0) $ do
     let this = {ix:n,val:c}
     callStack <- reverse <$> getCallStack this
     cursor <- foldM mkCallStackLinkEntry cursor callStack
     cursor <- mkCallStackEntry cursor =<< renderCall this.val
     for_ deps (mkCallStackLinkEntry cursor)
-    lift $ JQuery.display callstackSection
+    JQuery.display callstackSection
 
 -- | Creates the html string for a call link:
 --     <a href="javascript:showCall(ix)>renderedCall</a>"
@@ -237,64 +225,45 @@ mkCallLink :: { index :: Int, rendered :: String} -> String
 mkCallLink x =
   "<a href='javascript:PS.Debug.showCall(" <> show x.index <> ")()'>" <> escapeHTML x.rendered <> "</a>"
 
-mkCallStackLinkEntry :: forall m eff . JQuery -> {ix::Int,val::CallData} -> E (Eff (dom :: DOM | eff)) JQuery
+mkCallStackLinkEntry :: forall m eff . JQuery -> {ix::Int,val::CallData} -> E (dom :: DOM | eff) JQuery
 mkCallStackLinkEntry parent x = do
   r <- renderCall x.val
   mkCallStackEntry parent (mkCallLink {index:x.ix, rendered:r})
-mkCallStackEntry :: forall m eff . JQuery -> String -> E (Eff (dom :: DOM | eff)) JQuery
+
+mkCallStackEntry :: forall m eff . JQuery -> String -> E ((dom :: DOM | eff)) JQuery
 mkCallStackEntry parent contents = do
-  temp <- lift $ create "<ul>"
-  newEntry <- lift $ create $ "<li>" <> contents <> "</li>"
-  lift $ JQuery.append newEntry temp
-  lift $ JQuery.append temp parent
+  temp <- create "<ul>"
+  newEntry <- create $ "<li>" <> contents <> "</li>"
+  JQuery.append newEntry temp
+  JQuery.append temp parent
   pure newEntry
 
 --------------------------------------------------
 -- Our error handling monad
 
-newtype E m a = E (ExceptT (NonEmptyList MyError) m a)
+type E eff = Eff (exception :: EXCEPTION | eff)
 
-derive instance newtypeE :: Newtype (E m a) _
-derive newtype instance functorE :: Functor m => Functor (E m)
-derive newtype instance applyE :: Monad m => Apply (E m)
-derive newtype instance applicativeE :: Monad m => Applicative (E m)
-derive newtype instance altE :: Monad m => Alt (E m)
-derive newtype instance bindE :: Monad m => Bind (E m)
-derive newtype instance monadE :: Monad m => Monad (E m)
-derive newtype instance monadTransE :: MonadTrans E
-derive newtype instance monadThrowE :: Monad m => MonadThrow (NonEmptyList MyError) (E m)
+runE :: forall eff a. E eff a -> Eff (exception :: EXCEPTION | eff) a
+runE = id
 
-runE :: forall a. E Identity a -> Either (NonEmptyList MyError) a
-runE = un E >>> runExcept
-runE' :: forall a m. E m a -> m (Either (NonEmptyList MyError) a)
-runE' = un E >>> runExceptT
+throwE :: forall m a. MyError -> E m a
+throwE e = throwException (error $ show e)
 
-throwE :: forall m a. Monad m => MyError -> E m a
-throwE = throwError <<< singleton
+liftF :: forall a m . Foreign -> String -> F a -> E m a
+liftF f part = either (throwE <<< TraceError part f) pure <<< runExcept
 
--- Custom instances for backtracking
-instance plusE :: (Alternative m, Monad m) => Plus (E m) where empty = lift empty
-instance alternativeE :: (Alternative m, Monad m) => Alternative (E m)
-instance monadZeroE :: (MonadZero m) => MonadZero (E m)
-
-liftF :: forall a m . Applicative m => Foreign -> String -> F a -> E m a
-liftF f part = E <<< mapExceptT (un Identity >>> lmap (map (TraceError part f)) >>> pure)
-
-decodeE :: forall m a . Decode a => Applicative m => String -> Foreign -> E m a
+decodeE :: forall m a . Decode a => String -> Foreign -> E m a
 decodeE part f = liftF f part $ decode f
 
-embedE :: forall a m n . Monad m => Traversable n => E n a -> E m (n a)
-embedE = over E $ runExceptT >>> map except >>> sequence
-
-fromMaybeE :: forall m a . Monad m => MyError -> Maybe a -> E m a
+fromMaybeE :: forall m a . MyError -> Maybe a -> E m a
 fromMaybeE msg = maybe (throwE msg) pure
 
-attempt :: forall eff . E (Eff (console :: CONSOLE | eff)) Unit -> Eff (console :: CONSOLE | eff) Unit
-attempt e = runE' e >>= either logShow pure
+attempt :: forall eff . E eff Unit -> Eff (exception :: EXCEPTION | eff) Unit
+attempt = id
 
 -- | Our error type
 data MyError
-  = TraceError String Foreign ForeignError
+  = TraceError String Foreign (NonEmptyList ForeignError)
   | FunctionIndexError Int
   | VariableIndexError Int
   | CallIndexError Int
