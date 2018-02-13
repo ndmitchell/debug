@@ -70,17 +70,6 @@ lcm_gcd_vars =
     , ("least", "30")
     , ("x", "6")
     , ("y", "15") ]
---  expected:
---      $arg1 = 6
---      $arg2 = 15
---      $result = 27000.0
---      ^^ = 27000.0
---      fromIntegral = 30.0
---      gcd = 3
---      lcm = 30
---      least = 30
---      x = 6
---      y = 15
 
 debug [d|
     lcm_gcd_log :: Int -> Int -> Float
@@ -89,20 +78,22 @@ debug [d|
             val = fromIntegral (x `lcm` y) - base
         in logBase base val ** base
     |]
---  expected:
---      $arg1 = 6
---      $arg2 = 15
---      $result = 27.0
---      ** = 27.0
---      - = 27.0
---      base = 3.0
---      fromIntegral = 30.0
---      gcd = 3
---      lcm = 30
---      logBase = 3.0
---      val = 27.0
---      x = 6
---      y = 15
+
+lcm_gcd_log_vars :: [(Text, Text)]
+lcm_gcd_log_vars =
+    [ ("$arg1", "6")
+    , ("$arg2", "15")
+    , ("$result", "27.0")
+    , ("**", "27.0")
+    , ("-", "27.0")
+    , ("base", "3.0")
+    , ("fromIntegral", "30.0")
+    , ("gcd", "3")
+    , ("lcm", "30")
+    , ("logBase", "3.0")
+    , ("val", "27.0")
+    , ("x", "6")
+    , ("y", "15") ]
 
 debug [d|
     f :: Int -> Int
@@ -114,17 +105,18 @@ debug [d|
             x : xs -> f x : xs ++ zs
             [] -> zs
     |]
---  expected:
---      $arg1 = [2,3,4]
---      $arg2 = [7,8,9]
---      $result = [5,3,4,7,8,9]
---      ++ = [3,4,7,8,9]
---      : = [5,3,4,7,8,9]
---      f = 5
---      x = 2
---      xs = [3,4]
---      ys = [2,3,4]
---      zs = [7,8,9]
+case_test_vars :: [(Text, Text)]
+case_test_vars =
+    [ ("$arg1", "[2,3,4]")
+    , ("$arg2", "[7,8,9]")
+    , ("$result", "[5,3,4,7,8,9]")
+    , ("++", "[3,4,7,8,9]")
+    , (":", "[5,3,4,7,8,9]")
+    , ("f", "5")
+    , ("x", "2")
+    , ("xs", "[3,4]")
+    , ("ys", "[2,3,4]")
+    , ("zs", "[7,8,9]") ]
 
 debug [d|
     twoXs :: [Int] -> [Int] -> [Int]
@@ -132,18 +124,21 @@ debug [d|
         case x of
             x : xs -> f x : xs ++ y
             [] -> y
---  expected:
---      $arg1 = [2,3,4]
---      $arg2 = [7,8,9]
---      $result = [5,3,4,7,8,9]
---      ++ = [3,4,7,8,9]
---      : = [5,3,4,7,8,9]
---      f = 5
---      x = [2,3,4]
---      x' = 2
---      xs = [3,4]
---      y = [7,8,9]
     |]
+
+twoXs_vars :: [(Text, Text)]
+twoXs_vars =
+    [ ("$arg1", "[2,3,4]")
+    , ("$arg2", "[7,8,9]")
+    , ("$result", "[5,3,4,7,8,9]")
+    , ("++", "[3,4,7,8,9]")
+    , (":", "[5,3,4,7,8,9]")
+    , ("f", "5")
+    , ("x", "[2,3,4]")
+    , ("x'", "2")
+    , ("xs", "[3,4]")
+    , ("y", "[7,8,9]") ]
+
 
 debug [d|
     --barely comprehensible test with multiple values for x and xs
@@ -156,6 +151,25 @@ debug [d|
                     [] -> y
             [] -> y
     |]
+
+manyXs_vars :: [(Text, Text)]
+manyXs_vars =
+    [ ("$arg1", "[2,3,4]")
+    , ("$arg2", "[7,8,9]")
+    , ("$result", "[5,7,4,7,8,9]")
+    , ("++", "[4,7,8,9]")
+    , (":", "[5,7,4,7,8,9]")
+    , (":'", "[7,4,7,8,9]")
+    , ("f", "5")
+    , ("f'", "7")
+    , ("x", "[2,3,4]")
+    , ("x'", "2")
+    , ("x''", "3")
+    , ("xs", "[3,4]")
+    , ("xs'", "[4]")
+    , ("y", "[7,8,9]") ]
+
+
 -- expected
 --      $arg1 [2,3,4]
 --      $arg2 [7,8,9]
@@ -172,6 +186,13 @@ debug [d|
 --      xs'	[4]
 --      y	[7,8,9]
 
+{-
+    [ ("", "")
+    , ("", "")
+    , ("", "") ]
+-}
+
+
 explicit :: (Ord a, Show a) => [a] -> [a]
 explicit = quicksort'
     where
@@ -180,11 +201,12 @@ explicit = quicksort'
         quicksort'' t ((var t "x" -> x):(var t "xs" -> xs)) = quicksort' lt ++ [x] ++ quicksort' gt
             where (var t "lt" -> lt, var t "gt" -> gt) = partition (<= x) xs
 
-example name expr = do
+testExample name expr = do
     _ <- return ()
     putStrLn $ "Testing " ++ name
     debugClear
     print expr
+    checkVars name expr
     writeFile ("output" </> name <.> "js") . ("var trace =\n" ++) . (++ ";") =<< debugJSON
     debugSave $ "output" </> name <.> "html"
     -- see https://github.com/feuerbach/ansi-terminal/issues/47 as this test fails on Appveyor
@@ -194,10 +216,10 @@ example name expr = do
 
 checkVars :: Show a => String -> a -> IO ()
 checkVars name expr = do
-    _ <- return ()
-    putStrLn $ "Checking the variables for " ++ name
-    debugClear
-    print expr
+   -- _ <- return ()
+   -- putStrLn $ "Checking the variables for " ++ name
+   -- debugClear
+   -- print expr
     trace <- getDebugTrace
     let varList = map (first funName) $ getTraceVars trace
     case lookup (pack name) varList of
@@ -209,7 +231,6 @@ checkVars name expr = do
                     [] -> do
                         when (length vars /= length expected) $
                             fail $ "Expected " ++ show (length expected) ++ " variables, but found " ++ show (length vars)
-                        putStrLn "Ya"
                         return ()
                     xs -> fail $ "\n" ++ unlines xs
 
@@ -224,8 +245,11 @@ checkEachVar vars expected = foldr f [] vars where
                 else acc
 
 expectedVars :: [(String, [(Text, Text)])]
-expectedVars = [("lcm_gcd", lcm_gcd_vars)]
-
+expectedVars = [ ("lcm_gcd", lcm_gcd_vars)
+               , ("lcm_gcd_log", lcm_gcd_log_vars)
+               , ("case_test", case_test_vars)
+               , ("twoXs", twoXs_vars)
+               , ("manyXs", manyXs_vars) ]
 
 --TODO: replace the uncommented code before PR
 main = do
@@ -234,12 +258,13 @@ main = do
     example "quicksort" $ quicksort "haskell"
     example "quicksortBy" $ quicksortBy (<) "haskell"
     -}
-    --example "lcm_gcd" $ lcm_gcd 6 15
-    checkVars "lcm_gcd" $ lcm_gcd 6 15
-    {-
-    example "lcm_gcd_log" $ lcm_gcd_log 6 15
-    example "case_test" $ case_test [2,3,4] [7,8,9]
-    example "twoXs" $ twoXs [2,3,4] [7,8,9]
+
+    testExample "lcm_gcd" $ lcm_gcd 6 15
+    testExample "lcm_gcd_log" $ lcm_gcd_log 6 15
+    testExample "case_test" $ case_test [2,3,4] [7,8,9]
+    testExample "twoXs" $ twoXs [2,3,4] [7,8,9]
+    testExample "manyXs" $ manyXs [2,3,4] [7,8,9]
+{-
     example "manyXs" $ manyXs [2,3,4] [7,8,9]
     example "explicit" $ explicit "haskell"
     -}
