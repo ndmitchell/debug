@@ -19,7 +19,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as B
 import Util
 
-#if __GLASGOW_HASKELL__ >= 820
+#if __GLASGOW_HASKELL__ >= 802
 debug [d|
     quicksort :: (a -> a -> Bool) -> [a] -> [a]
     quicksort op [] = []
@@ -48,7 +48,7 @@ debug [d|
 main :: IO ()
 main = do
     trace <- getDebugTrace defaultHoedOptions $ do
-#if __GLASGOW_HASKELL__ >= 820
+#if __GLASGOW_HASKELL__ >= 802
       print (quicksort (<) "haskell")
 #endif
       print (listmap (3::Int))
@@ -57,7 +57,7 @@ main = do
     -- can remove once ansi-terminal-0.8 is available in Stackage LTS (which will be v11)
     try_ $ debugPrintTrace trace
     B.writeFile "hoed.json" $ encode trace
-#if __GLASGOW_HASKELL__ >= 820
+#if __GLASGOW_HASKELL__ >= 802
     Just refTrace <- decode <$> B.readFile "test/ref/hoed.json"
 #else
     Just refTrace <- decode <$> B.readFile "test/ref/hoed80.json"
