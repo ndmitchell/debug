@@ -7,18 +7,16 @@
 
 module Variables(main) where
 
+import Control.Exception.Extra
 import Control.Monad
+import Data.List
 import Data.Text (Text, pack, unpack)
 import qualified Data.Text as T
 import Data.Tuple.Extra
 import Debug
 import Debug.Util
-import Data.List
-import Control.Exception.Extra
-import System.Directory
 import System.FilePath
-
---TODO: remove this before PR
+import System.Directory
 import Debug.DebugTrace
 
 debug [d|
@@ -27,6 +25,19 @@ debug [d|
    quicksort (x:xs) = quicksort lt ++ [x] ++ quicksort gt
        where (lt, gt) = partition (<= x) xs
    |]
+
+quicksort_vars :: [(Text, Text)]
+quicksort_vars =
+    [ ("$arg1", "\"haskell\"")
+    , ("$result", "\"aehklls\"")
+    , ("++", "\"aehklls\"")
+    , ("++'", "\"hklls\"")
+    , ("gt", "\"skll\"")
+    , ("lt", "\"ae\"")
+    , ("quicksort", "\"ae\"")
+    , ("quicksort'", "\"klls\"")
+    , ("x", "'h'")
+    , ("xs", "\"askell\"") ]
 
 debug [d|
     quicksortBy :: (a -> a -> Bool) -> [a] -> [a]
@@ -105,6 +116,7 @@ debug [d|
             x : xs -> f x : xs ++ zs
             [] -> zs
     |]
+
 case_test_vars :: [(Text, Text)]
 case_test_vars =
     [ ("$arg1", "[2,3,4]")
@@ -139,7 +151,6 @@ twoXs_vars =
     , ("xs", "[3,4]")
     , ("y", "[7,8,9]") ]
 
-
 debug [d|
     --barely comprehensible test with multiple values for x and xs
     manyXs :: [Int] -> [Int] -> [Int]
@@ -169,30 +180,6 @@ manyXs_vars =
     , ("xs'", "[4]")
     , ("y", "[7,8,9]") ]
 
-
--- expected
---      $arg1 [2,3,4]
---      $arg2 [7,8,9]
---      $result	[5,7,4,7,8,9]
---      ++	[4,7,8,9]
---      :	[5,7,4,7,8,9]
---      :'  [7,4,7,8,9]
---      f	5
---      f'  7
---      x	[2,3,4]
---      x'	2
---      x''	3
---      xs	[3,4]
---      xs'	[4]
---      y	[7,8,9]
-
-{-
-    [ ("", "")
-    , ("", "")
-    , ("", "") ]
--}
-
-
 explicit :: (Ord a, Show a) => [a] -> [a]
 explicit = quicksort'
     where
@@ -201,12 +188,13 @@ explicit = quicksort'
         quicksort'' t ((var t "x" -> x):(var t "xs" -> xs)) = quicksort' lt ++ [x] ++ quicksort' gt
             where (var t "lt" -> lt, var t "gt" -> gt) = partition (<= x) xs
 
-testExample name expr = do
+testExample name expr testDisabled = do
     _ <- return ()
     putStrLn $ "Testing " ++ name
     debugClear
     print expr
-    checkVars name expr
+    unless testDisabled $
+        checkVars name expr
     writeFile ("output" </> name <.> "js") . ("var trace =\n" ++) . (++ ";") =<< debugJSON
     debugSave $ "output" </> name <.> "html"
     -- see https://github.com/feuerbach/ansi-terminal/issues/47 as this test fails on Appveyor
@@ -216,10 +204,6 @@ testExample name expr = do
 
 checkVars :: Show a => String -> a -> IO ()
 checkVars name expr = do
-   -- _ <- return ()
-   -- putStrLn $ "Checking the variables for " ++ name
-   -- debugClear
-   -- print expr
     trace <- getDebugTrace
     let varList = map (first funName) $ getTraceVars trace
     case lookup (pack name) varList of
@@ -245,29 +229,25 @@ checkEachVar vars expected = foldr f [] vars where
                 else acc
 
 expectedVars :: [(String, [(Text, Text)])]
-expectedVars = [ ("lcm_gcd", lcm_gcd_vars)
+expectedVars = [ ("quicksort", quicksort_vars)
+               , ("lcm_gcd", lcm_gcd_vars)
                , ("lcm_gcd_log", lcm_gcd_log_vars)
                , ("case_test", case_test_vars)
                , ("twoXs", twoXs_vars)
                , ("manyXs", manyXs_vars) ]
 
---TODO: replace the uncommented code before PR
 main = do
     createDirectoryIfMissing True "output"
-    {-
-    example "quicksort" $ quicksort "haskell"
-    example "quicksortBy" $ quicksortBy (<) "haskell"
-    -}
+    testExample "quicksort" (quicksort "haskell") False
+    testExample "lcm_gcd" (lcm_gcd 6 15) False
+    testExample "lcm_gcd_log" (lcm_gcd_log 6 15) False
+    testExample "case_test" (case_test [2,3,4] [7,8,9]) False
+    testExample "twoXs" (twoXs [2,3,4] [7,8,9]) False
+    testExample "manyXs" (manyXs [2,3,4] [7,8,9]) False
 
-    testExample "lcm_gcd" $ lcm_gcd 6 15
-    testExample "lcm_gcd_log" $ lcm_gcd_log 6 15
-    testExample "case_test" $ case_test [2,3,4] [7,8,9]
-    testExample "twoXs" $ twoXs [2,3,4] [7,8,9]
-    testExample "manyXs" $ manyXs [2,3,4] [7,8,9]
-{-
-    example "manyXs" $ manyXs [2,3,4] [7,8,9]
-    example "explicit" $ explicit "haskell"
-    -}
+    --skipping test of quicksortBy for now, as it looks like $arg1 is missing
+    testExample "quicksortBy" (quicksortBy (<) "haskell") True
+    testExample "explicit" (explicit "haskell") True
     copyFile "output/quicksort.js" "trace.js" -- useful for debugging the HTML
 
     evaluate type1
