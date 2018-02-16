@@ -1,6 +1,6 @@
 # HLint configuration file
 
 - ignore:
-  - name:
+    name:
     - Eta reduce      # Often eta-reducing gives worse debugging
     - Use camelCase   # Used for testing
