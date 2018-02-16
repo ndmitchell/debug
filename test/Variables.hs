@@ -2,17 +2,22 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
+{-# LANGUAGE OverloadedStrings #-}
 -- {-# OPTIONS_GHC -dth-dec-file #-} -- turn on to debug TH
 
 module Variables(main) where
 
+import Control.Exception.Extra
+import Control.Monad
+import Data.List
+import Data.Text (Text, pack, unpack)
+import qualified Data.Text as T
+import Data.Tuple.Extra
 import Debug
 import Debug.Util
-import Data.List
-import Control.Exception.Extra
-import System.Directory
 import System.FilePath
-
+import System.Directory
+import Debug.DebugTrace
 
 debug [d|
    quicksort :: Ord a => [a] -> [a]
@@ -20,6 +25,19 @@ debug [d|
    quicksort (x:xs) = quicksort lt ++ [x] ++ quicksort gt
        where (lt, gt) = partition (<= x) xs
    |]
+
+quicksort_vars :: [(Text, Text)]
+quicksort_vars =
+    [ ("$arg1", "\"haskell\"")
+    , ("$result", "\"aehklls\"")
+    , ("++", "\"aehklls\"")
+    , ("++'", "\"hklls\"")
+    , ("gt", "\"skll\"")
+    , ("lt", "\"ae\"")
+    , ("quicksort", "\"ae\"")
+    , ("quicksort'", "\"klls\"")
+    , ("x", "'h'")
+    , ("xs", "\"askell\"") ]
 
 debug [d|
     quicksortBy :: (a -> a -> Bool) -> [a] -> [a]
@@ -50,17 +68,19 @@ debug [d|
         let least = lcm x y
         in fromIntegral least ^^ gcd x y
     |]
---  expected:
---      $arg1 = 6
---      $arg2 = 15
---      $result = 27000.0
---      ^^ = 27000.0
---      fromIntegral = 30.0
---      gcd = 3
---      lcm = 30
---      least = 30
---      x = 6
---      y = 15
+
+lcm_gcd_vars :: [(Text, Text)]
+lcm_gcd_vars =
+    [ ("$arg1", "6")
+    , ("$arg2", "15")
+    , ("$result", "27000.0")
+    , ("^^", "27000.0")
+    , ("fromIntegral", "30.0")
+    , ("gcd", "3")
+    , ("lcm", "30")
+    , ("least", "30")
+    , ("x", "6")
+    , ("y", "15") ]
 
 debug [d|
     lcm_gcd_log :: Int -> Int -> Float
@@ -69,20 +89,22 @@ debug [d|
             val = fromIntegral (x `lcm` y) - base
         in logBase base val ** base
     |]
---  expected:
---      $arg1 = 6
---      $arg2 = 15
---      $result = 27.0
---      ** = 27.0
---      - = 27.0
---      base = 3.0
---      fromIntegral = 30.0
---      gcd = 3
---      lcm = 30
---      logBase = 3.0
---      val = 27.0
---      x = 6
---      y = 15
+
+lcm_gcd_log_vars :: [(Text, Text)]
+lcm_gcd_log_vars =
+    [ ("$arg1", "6")
+    , ("$arg2", "15")
+    , ("$result", "27.0")
+    , ("**", "27.0")
+    , ("-", "27.0")
+    , ("base", "3.0")
+    , ("fromIntegral", "30.0")
+    , ("gcd", "3")
+    , ("lcm", "30")
+    , ("logBase", "3.0")
+    , ("val", "27.0")
+    , ("x", "6")
+    , ("y", "15") ]
 
 debug [d|
     f :: Int -> Int
@@ -94,17 +116,19 @@ debug [d|
             x : xs -> f x : xs ++ zs
             [] -> zs
     |]
---  expected:
---      $arg1 = [2,3,4]
---      $arg2 = [7,8,9]
---      $result = [5,3,4,7,8,9]
---      ++ = [3,4,7,8,9]
---      : = [5,3,4,7,8,9]
---      f = 5
---      x = 2
---      xs = [3,4]
---      ys = [2,3,4]
---      zs = [7,8,9]
+
+case_test_vars :: [(Text, Text)]
+case_test_vars =
+    [ ("$arg1", "[2,3,4]")
+    , ("$arg2", "[7,8,9]")
+    , ("$result", "[5,3,4,7,8,9]")
+    , ("++", "[3,4,7,8,9]")
+    , (":", "[5,3,4,7,8,9]")
+    , ("f", "5")
+    , ("x", "2")
+    , ("xs", "[3,4]")
+    , ("ys", "[2,3,4]")
+    , ("zs", "[7,8,9]") ]
 
 debug [d|
     twoXs :: [Int] -> [Int] -> [Int]
@@ -112,18 +136,20 @@ debug [d|
         case x of
             x : xs -> f x : xs ++ y
             [] -> y
---  expected:
---      $arg1 = [2,3,4]
---      $arg2 = [7,8,9]
---      $result = [5,3,4,7,8,9]
---      ++ = [3,4,7,8,9]
---      : = [5,3,4,7,8,9]
---      f = 5
---      x = [2,3,4]
---      x' = 2
---      xs = [3,4]
---      y = [7,8,9]
     |]
+
+twoXs_vars :: [(Text, Text)]
+twoXs_vars =
+    [ ("$arg1", "[2,3,4]")
+    , ("$arg2", "[7,8,9]")
+    , ("$result", "[5,3,4,7,8,9]")
+    , ("++", "[3,4,7,8,9]")
+    , (":", "[5,3,4,7,8,9]")
+    , ("f", "5")
+    , ("x", "[2,3,4]")
+    , ("x'", "2")
+    , ("xs", "[3,4]")
+    , ("y", "[7,8,9]") ]
 
 debug [d|
     --barely comprehensible test with multiple values for x and xs
@@ -136,21 +162,23 @@ debug [d|
                     [] -> y
             [] -> y
     |]
--- expected
---      $arg1 [2,3,4]
---      $arg2 [7,8,9]
---      $result	[5,7,4,7,8,9]
---      ++	[4,7,8,9]
---      :	[5,7,4,7,8,9]
---      :'  [7,4,7,8,9]
---      f	5
---      f'  7
---      x	[2,3,4]
---      x'	2
---      x''	3
---      xs	[3,4]
---      xs'	[4]
---      y	[7,8,9]
+
+manyXs_vars :: [(Text, Text)]
+manyXs_vars =
+    [ ("$arg1", "[2,3,4]")
+    , ("$arg2", "[7,8,9]")
+    , ("$result", "[5,7,4,7,8,9]")
+    , ("++", "[4,7,8,9]")
+    , (":", "[5,7,4,7,8,9]")
+    , (":'", "[7,4,7,8,9]")
+    , ("f", "5")
+    , ("f'", "7")
+    , ("x", "[2,3,4]")
+    , ("x'", "2")
+    , ("x''", "3")
+    , ("xs", "[3,4]")
+    , ("xs'", "[4]")
+    , ("y", "[7,8,9]") ]
 
 explicit :: (Ord a, Show a) => [a] -> [a]
 explicit = quicksort'
@@ -160,12 +188,13 @@ explicit = quicksort'
         quicksort'' t ((var t "x" -> x):(var t "xs" -> xs)) = quicksort' lt ++ [x] ++ quicksort' gt
             where (var t "lt" -> lt, var t "gt" -> gt) = partition (<= x) xs
 
-
-example name expr = do
+testExample name expr testDisabled = do
     _ <- return ()
     putStrLn $ "Testing " ++ name
     debugClear
     print expr
+    unless testDisabled $
+        checkVars name expr
     writeFile ("output" </> name <.> "js") . ("var trace =\n" ++) . (++ ";") =<< debugJSON
     debugSave $ "output" </> name <.> "html"
     -- see https://github.com/feuerbach/ansi-terminal/issues/47 as this test fails on Appveyor
@@ -173,16 +202,52 @@ example name expr = do
     try_ debugPrint
     putStrLn "\n\n"
 
+checkVars :: Show a => String -> a -> IO ()
+checkVars name expr = do
+    trace <- getDebugTrace
+    let varList = map (first funName) $ getTraceVars trace
+    case lookup (pack name) varList of
+        Nothing -> fail $ "Cant find the function " ++ name ++ " in the trace"
+        Just vars ->
+            case lookup name expectedVars of
+                Nothing -> fail $ "Can't find the list of expected variables for the function " ++ name
+                Just expected -> case checkEachVar vars expected of
+                    [] -> do
+                        when (length vars /= length expected) $
+                            fail $ "Expected " ++ show (length expected) ++ " variables, but found " ++ show (length vars)
+                        return ()
+                    xs -> fail $ "\n" ++ unlines xs
+
+checkEachVar :: [(Text, Text)] -> [(Text, Text)] -> [String]
+checkEachVar vars expected = foldr f [] vars where
+    f :: (Text, Text) -> [String] -> [String]
+    f (key, val) acc =
+        case lookup key expected of
+            Nothing -> ("Couldn't find the variable " ++ T.unpack key ++ " in the expected results") : acc
+            Just v -> if v /= val
+                then ("Expected " ++ unpack val ++ " but got " ++ unpack v ++ " for the variable " ++ unpack key) : acc
+                else acc
+
+expectedVars :: [(String, [(Text, Text)])]
+expectedVars = [ ("quicksort", quicksort_vars)
+               , ("lcm_gcd", lcm_gcd_vars)
+               , ("lcm_gcd_log", lcm_gcd_log_vars)
+               , ("case_test", case_test_vars)
+               , ("twoXs", twoXs_vars)
+               , ("manyXs", manyXs_vars) ]
+
 main = do
     createDirectoryIfMissing True "output"
-    example "quicksort" $ quicksort "haskell"
-    example "quicksortBy" $ quicksortBy (<) "haskell"
-    example "lcm_gcd" $ lcm_gcd 6 15
-    example "lcm_gcd_log" $ lcm_gcd_log 6 15
-    example "case_test" $ case_test [2,3,4] [7,8,9]
-    example "twoXs" $ twoXs [2,3,4] [7,8,9]
-    example "manyXs" $ manyXs [2,3,4] [7,8,9]
-    example "explicit" $ explicit "haskell"
+    testExample "quicksort" (quicksort "haskell") False
+    testExample "lcm_gcd" (lcm_gcd 6 15) False
+    testExample "lcm_gcd_log" (lcm_gcd_log 6 15) False
+    testExample "case_test" (case_test [2,3,4] [7,8,9]) False
+    testExample "twoXs" (twoXs [2,3,4] [7,8,9]) False
+    testExample "manyXs" (manyXs [2,3,4] [7,8,9]) False
+
+    --skipping test of quicksortBy for now, as it looks like $arg1 is missing
+    testExample "quicksortBy" (quicksortBy (<) "haskell") True
+    testExample "explicit" (explicit "haskell") True
     copyFile "output/quicksort.js" "trace.js" -- useful for debugging the HTML
 
     evaluate type1
