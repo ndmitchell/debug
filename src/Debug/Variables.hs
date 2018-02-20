@@ -233,7 +233,12 @@ debug q = do
     decs <- q
     let askSig x = find (\case SigD y _ -> x == y; _ -> False) decs
     mapM (adjustDec askSig) decs
+    --mapM (adjustDec (askSig2 decs)) decs
 
+{-
+askSig2 :: [Dec] -> Name -> Maybe Dec
+askSig2 decs x = find (\case SigD y _ -> x == y; _ -> False) decs
+-}
 
 adjustDec :: (Name -> Maybe Dec) -> Dec -> Q Dec
 -- try and shove in a "_ =>" if we can, to capture necessary Show instances
@@ -260,8 +265,21 @@ adjustDec askSig o@(FunD name clauses@(Clause arity _ _:_))
     let body2 = VarE 'var `AppE` VarE tag `AppE` LitE (StringL "$result") `AppE` foldl AppE (VarE inner) (VarE tag : args2)
     let body = VarE 'funInfo `AppE` info `AppE` LamE [VarP tag] body2
     afterApps <- transformApps tag clauses2
-    return $ FunD name [Clause (map VarP args) (NormalB body) [FunD inner afterApps]]
+    afterWhere <- transformWhere tag afterApps
+    return $ FunD name [Clause (map VarP args) (NormalB body) [FunD inner afterWhere]]
 adjustDec askSig x = return x
+
+transformWhere :: Name -> [Clause] -> Q [Clause]
+transformWhere tag clauses =
+    return clauses
+    {-
+    traverse f clauses where
+        f :: Clause -> Q Clause
+        f cl@(Clause pats body decs) = do
+            --'decs' here follow a 'where' in the source
+            newDecs <- traverse (adjustDec (askSig2 decs)) decs
+            return $ Clause pats body newDecs
+    -}
 
 transformApps :: Name -> [Clause] -> Q [Clause]
 transformApps tag = mapM (appsFromClause tag)
@@ -269,7 +287,22 @@ transformApps tag = mapM (appsFromClause tag)
 appsFromClause :: Name -> Clause -> Q Clause
 appsFromClause tag cl@(Clause pats body decs) = do
     newBody <- appsFromBody tag body
-    return $ Clause pats newBody decs
+    newDecs <- mapM (appsFromDec' tag) decs
+    return $ Clause pats newBody newDecs
+
+-- TODO: remove this before PR
+appsFromDec' :: Name -> Dec -> Q Dec
+appsFromDec' tag d@(ValD pat body dec) = do
+    runIO $ putStrLn $ "**AFD' 1st match** dec: " ++ show dec
+    appsFromDec tag d
+appsFromDec' tag d@(FunD name subClauses) = do
+    runIO $ putStrLn "**AFD' 2nd match** subclauses: "
+    runIO $ mapM_ (putStrLn . show) subClauses
+    appsFromDec tag d
+appsFromDec' tag d = do
+    runIO $ putStrLn "**AFD' 3rd match**"
+    appsFromDec tag d
+-- end TODO
 
 appsFromBody :: Name -> Body -> Q Body
 appsFromBody _ b@(GuardedB _) = return b -- TODO: implement guards
