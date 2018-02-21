@@ -234,7 +234,6 @@ debug q = do
     let askSig x = find (\case SigD y _ -> x == y; _ -> False) decs
     mapM (adjustDec askSig) decs
 
-
 adjustDec :: (Name -> Maybe Dec) -> Dec -> Q Dec
 -- try and shove in a "_ =>" if we can, to capture necessary Show instances
 adjustDec askSig x@(SigD name ty@(ForallT vars ctxt typ))
@@ -269,7 +268,8 @@ transformApps tag = mapM (appsFromClause tag)
 appsFromClause :: Name -> Clause -> Q Clause
 appsFromClause tag cl@(Clause pats body decs) = do
     newBody <- appsFromBody tag body
-    return $ Clause pats newBody decs
+    newDecs <- mapM (appsFromDec tag) decs
+    return $ Clause pats newBody newDecs
 
 appsFromBody :: Name -> Body -> Q Body
 appsFromBody _ b@(GuardedB _) = return b -- TODO: implement guards
@@ -302,7 +302,8 @@ appsFromDec :: Name -> Dec -> Q Dec
 appsFromDec tag d@(ValD pat body dec) = do
     newBody <- appsFromBody tag body
     return $ ValD pat newBody dec
-appsFromDec tag d@(FunD name subClauses) = return d
+appsFromDec tag d@(FunD name subClauses) =
+    FunD name <$> traverse (appsFromClause tag) subClauses
 appsFromDec _ d = return d
 
 appsFromMatch :: Name -> Match -> Q Match
