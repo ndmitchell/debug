@@ -34,6 +34,7 @@ quicksort_vars =
     , ("++'", "\"hklls\"")
     , ("gt", "\"skll\"")
     , ("lt", "\"ae\"")
+    , ("partition", "(\"ae\",\"skll\")")
     , ("quicksort", "\"ae\"")
     , ("quicksort'", "\"klls\"")
     , ("x", "'h'")
@@ -180,6 +181,27 @@ manyXs_vars =
     , ("xs'", "[4]")
     , ("y", "[7,8,9]") ]
 
+debug [d|
+    where_1 :: Int -> Int -> Int
+    where_1 x y = bar x + bar y
+        where bar z = z * z
+    |]
+
+where_1_vars :: [(Text, Text)]
+where_1_vars =
+    [ ("$arg1", "5")
+    , ("$arg2", "7")
+    , ("$result", "74")
+    , ("*", "25")
+    , ("*'", "49")
+    , ("+", "74")
+    , ("bar", "25")
+    , ("bar'", "49")
+    , ("x", "5")
+    , ("y", "7")
+    , ("z", "5")
+    , ("z'", "7") ]
+
 explicit :: (Ord a, Show a) => [a] -> [a]
 explicit = quicksort'
     where
@@ -234,7 +256,8 @@ expectedVars = [ ("quicksort", quicksort_vars)
                , ("lcm_gcd_log", lcm_gcd_log_vars)
                , ("case_test", case_test_vars)
                , ("twoXs", twoXs_vars)
-               , ("manyXs", manyXs_vars) ]
+               , ("manyXs", manyXs_vars)
+               , ("where_1", where_1_vars) ]
 
 main = do
     createDirectoryIfMissing True "output"
@@ -244,6 +267,7 @@ main = do
     testExample "case_test" (case_test [2,3,4] [7,8,9]) False
     testExample "twoXs" (twoXs [2,3,4] [7,8,9]) False
     testExample "manyXs" (manyXs [2,3,4] [7,8,9]) False
+    testExample "where_1" (where_1 5 7) False
 
     --skipping test of quicksortBy for now, as it looks like $arg1 is missing
     testExample "quicksortBy" (quicksortBy (<) "haskell") True
