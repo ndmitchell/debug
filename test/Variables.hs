@@ -202,6 +202,27 @@ where_1_vars =
     , ("z", "5")
     , ("z'", "7") ]
 
+debug [d|
+    where_2 :: [Int] -> [Int]
+    where_2 xs = fmap f xs where
+        f x = x * x
+    |]
+
+where_2_vars :: [(Text, Text)]
+where_2_vars =
+    [ ("$arg1", "[1,2,3,4,5,6,7,8,9]")
+    , ("$result", "[1,4,9,16,25,36,49,64,81]")
+    , ("*", "1")
+    , ("*'", "4")
+    , ("*''", "9")
+    , ("*'''", "16")
+    , ("fmap", "[1,4,9,16,25,36,49,64,81]")
+    , ("x", "1")
+    , ("x'", "2")
+    , ("x''", "3")
+    , ("x'''", "4")
+    , ("xs", "[1,2,3,4,5,6,7,8,9]") ]
+
 explicit :: (Ord a, Show a) => [a] -> [a]
 explicit = quicksort'
     where
@@ -257,7 +278,8 @@ expectedVars = [ ("quicksort", quicksort_vars)
                , ("case_test", case_test_vars)
                , ("twoXs", twoXs_vars)
                , ("manyXs", manyXs_vars)
-               , ("where_1", where_1_vars) ]
+               , ("where_1", where_1_vars)
+               , ("where_2", where_2_vars) ]
 
 main = do
     createDirectoryIfMissing True "output"
@@ -268,6 +290,7 @@ main = do
     testExample "twoXs" (twoXs [2,3,4] [7,8,9]) False
     testExample "manyXs" (manyXs [2,3,4] [7,8,9]) False
     testExample "where_1" (where_1 5 7) False
+    testExample "where_2" (where_2 [1,2,3,4,5,6,7,8,9]) False
 
     --skipping test of quicksortBy for now, as it looks like $arg1 is missing
     testExample "quicksortBy" (quicksortBy (<) "haskell") True
