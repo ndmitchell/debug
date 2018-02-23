@@ -203,7 +203,7 @@ var (Call _ ref) name val = unsafePerformIO $ do
         whenJust name' (\n -> atomicModifyIORef ref $ \v -> ((n, var) :v, ()))
     return val
 
--- | If a name is already being used, find the next available name by adding ' (prime) chars until
+-- | If a name is already used, find the next available name by adding ' (prime) chars until
 --   the resulting name is unique
 unShadowName :: IORef [(Text, Var)] -> Text -> IO (Maybe Text)
 unShadowName ioRef t = do
