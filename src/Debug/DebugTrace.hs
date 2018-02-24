@@ -47,7 +47,6 @@ import GHC.Generics
 import System.IO
 import System.Directory
 import Text.Show.Functions() -- Make sure the Show for functions instance exists
-import qualified Language.Javascript.JQuery as JQuery
 import Web.Browser
 import Paths_debug
 import Text.PrettyPrint.ANSI.Leijen as PP hiding ((<$>), (<>))
@@ -121,12 +120,10 @@ debugSaveTrace :: FilePath -> DebugTrace -> IO ()
 debugSaveTrace file db = do
     html <- TL.readFile =<< getDataFileName "html/debug.html"
     debug <- TL.readFile =<< getDataFileName "html/debug.js"
-    jquery <- TL.readFile =<< JQuery.file
     let trace = encodeToLazyText db
     let script a = "<script>\n" <> a <> "\n</script>"
     let f x | "trace.js" `TL.isInfixOf` x = script ("var trace =\n" <> trace <> ";")
             | "debug.js" `TL.isInfixOf` x = script debug
-            | "code.jquery.com/jquery" `TL.isInfixOf` x = script jquery
             | otherwise = x
     TL.writeFile file $ TL.unlines $ map f $ TL.lines html
 
