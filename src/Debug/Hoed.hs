@@ -60,6 +60,11 @@ module Debug.Hoed
   , debugRun
     -- * Generate a trace
   , getDebugTrace
+    -- * Trace commands
+  , debugPrintTrace
+  , debugJSONTrace
+  , debugViewTrace
+  , debugSaveTrace
     -- * Reexported from Hoed
   , Observable(..)
   , observe
@@ -88,7 +93,11 @@ import           Debug.Util
 import           Debug.DebugTrace            as D (CallData (..),
                                                    DebugTrace (..),
                                                    Function (..),
-                                                   debugViewTrace
+                                                   debugViewTrace,
+                                                   debugPrintTrace,
+                                                   debugJSONTrace,
+                                                   debugViewTrace,
+                                                   debugSaveTrace
                                                    )
 import           GHC.Exts                    (IsList (..))
 import           Language.Haskell.TH
