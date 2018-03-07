@@ -1,3 +1,6 @@
+-- Generate the output by running
+-- > elm-make Main.elm --output=../html/debug.js
+
 module Main exposing (..)
 
 import Array
