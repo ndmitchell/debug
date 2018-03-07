@@ -1,6 +1,7 @@
 /dist/
+/elm/elm-stuff
+/.stack-work/
 /stack.yaml
 /trace.js
 /hoed.json
 /output/
-.stack-work/
