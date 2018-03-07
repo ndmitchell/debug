@@ -1,5 +1,6 @@
 /dist/
 /stack.yaml
-trace.js
+/trace.js
+/hoed.json
 /output/
 .stack-work/
