@@ -13,7 +13,6 @@ module Hoed(main) where
 
 import Control.Exception.Extra
 import Debug.Hoed
-import Debug.DebugTrace
 import Control.Monad
 import Data.Aeson
 import qualified Data.ByteString.Lazy as B

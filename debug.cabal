@@ -55,7 +55,6 @@ library
         text,
         uniplate,
         unordered-containers,
-        js-jquery,
         prettyprinter,
         prettyprinter-compat-ansi-wl-pprint,
         vector
