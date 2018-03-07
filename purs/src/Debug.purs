@@ -1,3 +1,7 @@
+-- Not currently used
+-- Built using
+-- > pulp build -m Debug -O --to ../html/debug.js
+
 module Debug where
 
 import Data.Foreign
