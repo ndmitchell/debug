@@ -1,9 +1,10 @@
 -- Generate the output by running
 -- > elm-make Main.elm --output=../html/debug.js
 
+
 module Main exposing (..)
 
-import Array
+import Array exposing (..)
 import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -12,6 +13,7 @@ import Json.Decode exposing (decodeValue)
 import Json.Encode exposing (Value)
 import List
 import Maybe.Extra as Maybe
+import Paginate exposing (..)
 import Regex exposing (..)
 import Set
 import String
@@ -19,10 +21,20 @@ import Trace exposing (..)
 import Tuple exposing (second)
 
 
+type Page
+    = First
+    | Last
+    | Next
+    | Prev
+    | GoTo Int
+
+
 type Msg
     = SelectCall Int
     | SelectFunction String
     | CallFilter String
+    | CallPage Page
+    | ChangeCallPageSize String
 
 
 type alias ProcessedCall =
@@ -33,6 +45,8 @@ type alias Model =
     { selectedCall : Int
     , selectedFunction : Maybe String
     , callFilter : Maybe Regex
+    , callsPerPage : Int
+    , filteredCalls : PaginatedList ( Int, ProcessedCall )
     , trace : Result String (DebugTrace ProcessedCall)
     }
 
@@ -44,26 +58,66 @@ update msg model =
             ( { model | selectedCall = x }, Cmd.none )
 
         SelectFunction x ->
-            ( { model
-                | selectedFunction =
+            let
+                selectedFunction =
                     if x == "(All)" then
                         Nothing
                     else
                         Just x
+            in
+            ( { model
+                | selectedFunction = selectedFunction
+                , filteredCalls =
+                    model.trace
+                        |> Result.toMaybe
+                        |> Maybe.map (matchCalls selectedFunction model.callFilter)
+                        |> Maybe.withDefault []
+                        |> Paginate.fromList model.callsPerPage
               }
             , Cmd.none
             )
 
         CallFilter x ->
-            ( { model
-                | callFilter =
+            let
+                callFilter =
                     if x == "" then
                         Nothing
                     else
                         Just (regex x)
+            in
+            ( { model
+                | callFilter = callFilter
+                , filteredCalls =
+                    model.trace
+                        |> Result.toMaybe
+                        |> Maybe.map (matchCalls model.selectedFunction callFilter)
+                        |> Maybe.withDefault []
+                        |> Paginate.fromList model.callsPerPage
               }
             , Cmd.none
             )
+
+        CallPage First ->
+            ( { model | filteredCalls = Paginate.first model.filteredCalls }, Cmd.none )
+
+        CallPage Last ->
+            ( { model | filteredCalls = Paginate.last model.filteredCalls }, Cmd.none )
+
+        CallPage Next ->
+            ( { model | filteredCalls = Paginate.next model.filteredCalls }, Cmd.none )
+
+        CallPage Prev ->
+            ( { model | filteredCalls = Paginate.prev model.filteredCalls }, Cmd.none )
+
+        CallPage (GoTo n) ->
+            ( { model | filteredCalls = Paginate.goTo n model.filteredCalls }, Cmd.none )
+
+        ChangeCallPageSize size ->
+            let
+                sizeAsInt =
+                    Result.withDefault 10 <| String.toInt size
+            in
+            ( { model | filteredCalls = Paginate.changeItemsPerPage sizeAsInt model.filteredCalls }, Cmd.none )
 
 
 view : Model -> Html Msg
@@ -110,27 +164,96 @@ view model =
 
 viewCallList : Model -> DebugTrace ProcessedCall -> Html Msg
 viewCallList model trace =
-    div []
-        [ select [ id "function-drop", style [ ( "width", "100%" ) ], onInput SelectFunction ]
-            (option [] [ text "(All)" ]
-                :: (trace.functions |> Array.map (\x -> x.name) |> Array.toList |> Set.fromList |> Set.toList |> List.map (\x -> option [] [ text x ]))
-            )
-        , input
-            [ id "function-text"
-            , style [ ( "margin-top", "5px" ), ( "width", "100%" ) ]
-            , type_ "text"
-            , placeholder "Filter (using regex)"
-            , onInput CallFilter
+    let
+        itemsPerPageSelector =
+            div []
+                [ text "Showing"
+                , select [ onInput ChangeCallPageSize ]
+                    [ option [ value "10" ] [ text "10" ]
+                    , option [ value "20" ] [ text "20" ]
+                    , option [ value "50" ] [ text "50" ]
+                    , option [ value "100" ] [ text "100" ]
+                    , option [ value "1000" ] [ text "1000" ]
+                    ]
+                , text "calls per page"
+                ]
+
+        prevButtons =
+            [ button [ onClick (CallPage First), disabled <| Paginate.isFirst model.filteredCalls ] [ text "<<" ]
+            , button [ onClick (CallPage Prev), disabled <| Paginate.isFirst model.filteredCalls ] [ text "<" ]
             ]
-            []
-        , ul [ id "call-list" ]
-            (matchCalls trace model.selectedFunction model.callFilter
-                |> List.map
-                    (\( i, c ) ->
-                        li [] [ viewCallLink i c.rendered ]
-                    )
-            )
+
+        nextButtons =
+            [ button [ onClick (CallPage Next), disabled <| Paginate.isLast model.filteredCalls ] [ text ">" ]
+            , button [ onClick (CallPage Last), disabled <| Paginate.isLast model.filteredCalls ] [ text ">>" ]
+            ]
+
+        pagerButtonView index isActive =
+            button
+                [ style
+                    [ ( "font-weight"
+                      , if isActive then
+                            "bold"
+                        else
+                            "normal"
+                      )
+                    ]
+                , onClick <| CallPage (GoTo index)
+                ]
+                [ text <| toString index ]
+
+        functionNameSelector =
+            select [ id "function-drop", style [ ( "width", "100%" ) ], onInput SelectFunction ]
+                (option [] [ text "(All)" ]
+                    :: (trace.functions |> Array.map (\x -> x.name) |> Array.toList |> Set.fromList |> Set.toList |> List.map (\x -> option [] [ text x ]))
+                )
+
+        nameFilterInput =
+            input
+                [ id "function-text"
+                , style [ ( "margin-top", "5px" ), ( "width", "100%" ) ]
+                , type_ "text"
+                , placeholder "Filter (using regex)"
+                , onInput CallFilter
+                ]
+                []
+
+        callView ( i, c ) =
+            li [] [ viewCallLink i c.rendered ]
+    in
+    div [] <|
+        [ functionNameSelector
+        , nameFilterInput
+        , span [] [ text (toString (Paginate.length model.filteredCalls) ++ " calls matched.") ]
+        , itemsPerPageSelector
         ]
+            ++ prevButtons
+            ++ [ span [] <| boundedPager 2 pagerButtonView model.filteredCalls ]
+            ++ nextButtons
+            ++ [ ul [] (List.map callView <| Paginate.page model.filteredCalls) ]
+
+
+{-| Used to build a bounded list of page numbers centered around the current page
+-}
+boundedPager : Int -> (Int -> Bool -> b) -> PaginatedList a -> List b
+boundedPager radius f p =
+    let
+        center =
+            currentPage p
+
+        canStart =
+            Basics.max 1 (center - radius)
+
+        canEnd =
+            Basics.min (totalPages p) (center + radius)
+
+        start =
+            Basics.max 1 (canEnd - radius * 2)
+
+        end =
+            Basics.min (totalPages p) (canStart + radius * 2)
+    in
+    List.range start end |> List.map (\i -> f i (i == center))
 
 
 viewCallLink : Int -> String -> Html Msg
@@ -270,8 +393,8 @@ getCallStackUpwards trace call =
             Result.Err <| "Unexpected: more than one parents for a call: " ++ toString pp
 
 
-matchCalls : DebugTrace ProcessedCall -> Maybe String -> Maybe Regex -> List ( Int, ProcessedCall )
-matchCalls trace selectedFunction callFilter =
+matchCalls : Maybe String -> Maybe Regex -> DebugTrace ProcessedCall -> List ( Int, ProcessedCall )
+matchCalls selectedFunction callFilter trace =
     trace.calls
         |> Array.toIndexedList
         |> List.filter
@@ -341,10 +464,16 @@ main =
     programWithFlags
         { init =
             \tr ->
-                ( { trace = traverseDebugTrace (decodeValue (callDataDecoder tr) >> Result.map (processCall tr)) tr
+                let
+                    unpackedTrace =
+                        traverseDebugTrace (decodeValue (callDataDecoder tr) >> Result.map (processCall tr)) tr
+                in
+                ( { trace = unpackedTrace
                   , selectedCall = 0
                   , selectedFunction = Maybe.Nothing
-                  , callFilter = Nothing
+                  , callFilter = Maybe.Nothing
+                  , filteredCalls = unpackedTrace |> Result.map (\x -> Array.toIndexedList x.calls) |> Result.withDefault [] |> Paginate.fromList 10
+                  , callsPerPage = 10
                   }
                 , Cmd.none
                 )
