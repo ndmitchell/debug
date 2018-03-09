@@ -30,6 +30,7 @@ type Page
     | Prev
     | GoTo Int
 
+
 type Msg
     = ChangeLocation Location
     | SelectFunction String
@@ -123,47 +124,49 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    case (model.trace, router model.location) of
-        (Result.Err e, _) ->
+    case ( model.trace, router model.location ) of
+        ( Result.Err e, _ ) ->
             text e
 
-        (Result.Ok trace, SelectCall selectedCall) -> viewCall model trace selectedCall
+        ( Result.Ok trace, SelectCall selectedCall ) ->
+            viewCall model trace selectedCall
+
 
 viewCall : Model -> DebugTrace ProcessedCall -> Int -> Html Msg
 viewCall model trace selectedCall =
-            let
-                processedCall =
-                    Array.get selectedCall trace.calls
+    let
+        processedCall =
+            Array.get selectedCall trace.calls
 
-                fun =
-                    processedCall |> Maybe.map (\processedCall -> processedCall.call.callFunction)
-            in
-            table [ style [ ( "height", "100%" ), ( "width", "100%" ) ] ]
-                [ tr [] [ td [ colspan 3 ] [ h1 [] [ text "Haskell Debugger" ] ] ]
-                , tr []
-                    [ td [ rowspan 3, style [ ( "width", "25%" ), ( "padding-right", "40px" ) ] ]
-                        [ h2 [] [ text "Functions" ]
-                        , viewCallList model trace
-                        ]
-                    , td []
-                        [ h2 [] [ text "Source" ]
-                        , ul [ id "function-source" ]
-                            [ viewSource trace (Maybe.map (\x -> x.call) processedCall) ]
-                        ]
-                    ]
-                , tr []
-                    [ td []
-                        [ h2 [] [ text "Variables" ]
-                        , viewVariables trace (Maybe.map (\x -> x.call) processedCall)
-                        ]
-                    ]
-                , tr [ id "function-depends-section" ]
-                    [ td []
-                        [ h2 [] [ text "Calls" ]
-                        , viewCallStack trace (Maybe.map (\x -> x.call) processedCall)
-                        ]
-                    ]
+        fun =
+            processedCall |> Maybe.map (\processedCall -> processedCall.call.callFunction)
+    in
+    table [ style [ ( "height", "100%" ), ( "width", "100%" ) ] ]
+        [ tr [] [ td [ colspan 3 ] [ h1 [] [ text "Haskell Debugger" ] ] ]
+        , tr []
+            [ td [ rowspan 3, style [ ( "width", "25%" ), ( "padding-right", "40px" ) ] ]
+                [ h2 [] [ text "Functions" ]
+                , viewCallList model trace
                 ]
+            , td []
+                [ h2 [] [ text "Source" ]
+                , ul [ id "function-source" ]
+                    [ viewSource trace (Maybe.map (\x -> x.call) processedCall) ]
+                ]
+            ]
+        , tr []
+            [ td []
+                [ h2 [] [ text "Variables" ]
+                , viewVariables trace (Maybe.map (\x -> x.call) processedCall)
+                ]
+            ]
+        , tr [ id "function-depends-section" ]
+            [ td []
+                [ h2 [] [ text "Calls" ]
+                , viewCallStack trace (Maybe.map (\x -> x.call) processedCall)
+                ]
+            ]
+        ]
 
 
 viewCallList : Model -> DebugTrace ProcessedCall -> Html Msg
@@ -486,7 +489,11 @@ main =
         , update = update
         }
 
-type ParsedLocation = SelectCall Int
+
+type ParsedLocation
+    = SelectCall Int
+
 
 router : Location -> ParsedLocation
-router = Maybe.withDefault (SelectCall 0) << parseHash (UrlParser.map SelectCall (UrlParser.s "call" </> int))
+router =
+    Maybe.withDefault (SelectCall 0) << parseHash (UrlParser.map SelectCall (UrlParser.s "call" </> int))
