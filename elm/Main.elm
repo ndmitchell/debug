@@ -13,12 +13,14 @@ import Json.Decode exposing (decodeValue)
 import Json.Encode exposing (Value)
 import List
 import Maybe.Extra as Maybe
+import Navigation exposing (..)
 import Paginate exposing (..)
 import Regex exposing (..)
 import Set
 import String
 import Trace exposing (..)
 import Tuple exposing (second)
+import UrlParser exposing (..)
 
 
 type Page
@@ -28,9 +30,8 @@ type Page
     | Prev
     | GoTo Int
 
-
 type Msg
-    = SelectCall Int
+    = ChangeLocation Location
     | SelectFunction String
     | CallFilter String
     | CallPage Page
@@ -42,7 +43,7 @@ type alias ProcessedCall =
 
 
 type alias Model =
-    { selectedCall : Int
+    { location : Location
     , selectedFunction : Maybe String
     , callFilter : Maybe Regex
     , callsPerPage : Int
@@ -54,8 +55,8 @@ type alias Model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        SelectCall x ->
-            ( { model | selectedCall = x }, Cmd.none )
+        ChangeLocation x ->
+            ( { model | location = x }, Cmd.none )
 
         SelectFunction x ->
             let
@@ -122,14 +123,17 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    case model.trace of
-        Result.Err e ->
+    case (model.trace, router model.location) of
+        (Result.Err e, _) ->
             text e
 
-        Result.Ok trace ->
+        (Result.Ok trace, SelectCall selectedCall) -> viewCall model trace selectedCall
+
+viewCall : Model -> DebugTrace ProcessedCall -> Int -> Html Msg
+viewCall model trace selectedCall =
             let
                 processedCall =
-                    Array.get model.selectedCall trace.calls
+                    Array.get selectedCall trace.calls
 
                 fun =
                     processedCall |> Maybe.map (\processedCall -> processedCall.call.callFunction)
@@ -258,7 +262,7 @@ boundedPager radius f p =
 
 viewCallLink : Int -> String -> Html Msg
 viewCallLink index rendered =
-    a [ href "javascript:()", onClick (SelectCall index) ] [ text rendered ]
+    a [ href ("#call/" ++ toString index) ] [ text rendered ]
 
 
 viewVariables : DebugTrace a -> Maybe CallData -> Html Msg
@@ -461,15 +465,15 @@ processCall tr call =
 
 main : Program (DebugTrace Value) Model Msg
 main =
-    programWithFlags
+    Navigation.programWithFlags ChangeLocation
         { init =
-            \tr ->
+            \tr loc ->
                 let
                     unpackedTrace =
                         traverseDebugTrace (decodeValue (callDataDecoder tr) >> Result.map (processCall tr)) tr
                 in
                 ( { trace = unpackedTrace
-                  , selectedCall = 0
+                  , location = loc
                   , selectedFunction = Maybe.Nothing
                   , callFilter = Maybe.Nothing
                   , filteredCalls = unpackedTrace |> Result.map (\x -> Array.toIndexedList x.calls) |> Result.withDefault [] |> Paginate.fromList 10
@@ -481,3 +485,8 @@ main =
         , view = view
         , update = update
         }
+
+type ParsedLocation = SelectCall Int
+
+router : Location -> ParsedLocation
+router = Maybe.withDefault (SelectCall 0) << parseHash (UrlParser.map SelectCall (UrlParser.s "call" </> int))
