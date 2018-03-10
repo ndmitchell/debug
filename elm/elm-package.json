@@ -1,7 +1,7 @@
 {
     "version": "1.0.0",
-    "summary": "helpful summary of your project, less than 80 characters",
-    "repository": "https://github.com/user/project.git",
+    "summary": "A frontend for the debug Haskell package",
+    "repository": "https://github.com/ndmitchell/debug.git",
     "license": "BSD3",
     "source-directories": [
         "."
