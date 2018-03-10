@@ -118,12 +118,15 @@ debugPrintTrace trace@DebugTrace{..} = do
 -- | Save information about observed functions to the specified file, in HTML format.
 debugSaveTrace :: FilePath -> DebugTrace -> IO ()
 debugSaveTrace file db = do
-    html <- TL.readFile =<< getDataFileName "html/debug.html"
+    html  <- TL.readFile =<< getDataFileName "html/debug.html"
     debug <- TL.readFile =<< getDataFileName "html/debug.js"
+    css   <- TL.readFile =<< getDataFileName "html/debug.css"
     let trace = encodeToLazyText db
     let script a = "<script>\n" <> a <> "\n</script>"
+    let style a = "<style>\n" <> a <> "\n</style>"
     let f x | "trace.js" `TL.isInfixOf` x = script ("var trace =\n" <> trace <> ";")
             | "debug.js" `TL.isInfixOf` x = script debug
+            | "debug.css" `TL.isInfixOf` x = style css
             | otherwise = x
     TL.writeFile file $ TL.unlines $ map f $ TL.lines html
 

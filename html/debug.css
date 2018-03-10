@@ -1,0 +1,36 @@
+body {
+    font-family: 'Source Sans Pro', 'Trebuchet MS', 'Lucida Grande', 'Bitstream Vera Sans', 'Helvetica Neue', sans-serif;
+    color: #293c4b;
+    height: 100%;
+}
+h1 {margin-bottom: 5px;}
+ul {font-size: 10pt;}
+li {font-family: sans-serif;}
+h1 {font-size: 20pt; background-color: #d3d3d3; margin-top: 0; padding: 5px;}
+#function-list a {text-decoration: none;}
+#function-depends-section ul {list-style-type: none;}
+#function-depends-current {list-style-type: disc;}
+h2 {margin-top: 0; margin-bottom: 5px; font-size: 12pt;}
+.h2like {margin-top: 0; margin-bottom: 5px; font-size: 12pt; font-weight: bold}
+td {vertical-align: top;}
+abbr {text-decoration: none;}
+.render-call{margin: 5px;}
+.render-arg{margin: 5px; display: inline-block;}
+.call-link{}
+.calls-per-page{font-size:10pt;}
+
+.hs-keyglyph {color: red;}
+.hs-equals   {color: blue;, font-weight: bold}
+.hs-keyword {color: blue;}
+.hs-comment {color: green;}
+.hs-str, .hs-chr {color: teal;}
+
+a:link, a:visited {
+    color: unset;
+    text-decoration: unset;
+    cursor: auto;
+}
+
+a:link:active, a:visited:active {
+    color: unset;
+}
