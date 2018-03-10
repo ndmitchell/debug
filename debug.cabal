@@ -50,7 +50,6 @@ library
         deepseq,
         directory,
         hashable,
-        monoidal-containers,
         template-haskell,
         open-browser,
         text,
