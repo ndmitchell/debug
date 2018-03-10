@@ -21,6 +21,7 @@ extra-doc-files:
     README.md
 
 data-files:
+    html/debug.css
     html/debug.html
     html/debug.js
 
