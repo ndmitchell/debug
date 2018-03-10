@@ -1,134 +1,19 @@
--- Generate the output by running
--- > elm-make Main.elm --output=../html/debug.js
-
-
-module Main exposing (..)
+module View exposing(processCall, view)
 
 import Array exposing (..)
 import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
-import Json.Decode exposing (decodeValue)
-import Json.Encode exposing (Value)
 import List
 import Maybe.Extra as Maybe
-import Navigation exposing (..)
 import Paginate exposing (..)
 import Regex exposing (..)
 import Set
 import String
 import Trace exposing (..)
 import Tuple exposing (second)
-import UrlParser exposing (..)
-
-
-type Page
-    = First
-    | Last
-    | Next
-    | Prev
-    | GoTo Int
-
-
-type Msg
-    = ChangeLocation Location
-    | SelectFunction String
-    | CallFilter String
-    | CallPage Page
-    | ChangeCallPageSize String
-
-
-type alias ProcessedCall =
-    { searchString : String, rendered : Html Msg, call : CallData }
-
-
-type alias Model =
-    { location : Location
-    , selectedFunction : Maybe String
-    , callFilter : Maybe Regex
-    , filteredCalls : PaginatedList ( Int, ProcessedCall )
-    , trace : Result String (DebugTrace ProcessedCall)
-    }
-
-
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    case msg of
-        ChangeLocation x ->
-            ( { model | location = x }, Cmd.none )
-
-        SelectFunction x ->
-            let
-                selectedFunction =
-                    if x == "(All)" then
-                        Nothing
-                    else
-                        Just x
-            in
-            ( { model
-                | selectedFunction = selectedFunction
-                , filteredCalls =
-                    model.trace
-                        |> Result.toMaybe
-                        |> Maybe.map (matchCalls selectedFunction model.callFilter)
-                        |> Maybe.withDefault []
-                        |> Paginate.fromList (Paginate.itemsPerPage model.filteredCalls)
-              }
-            , Cmd.none
-            )
-
-        CallFilter x ->
-            let
-                callFilter =
-                    if x == "" then
-                        Nothing
-                    else
-                        Just (regex x)
-            in
-            ( { model
-                | callFilter = callFilter
-                , filteredCalls =
-                    model.trace
-                        |> Result.toMaybe
-                        |> Maybe.map (matchCalls model.selectedFunction callFilter)
-                        |> Maybe.withDefault []
-                        |> Paginate.fromList (Paginate.itemsPerPage model.filteredCalls)
-              }
-            , Cmd.none
-            )
-
-        CallPage First ->
-            ( { model | filteredCalls = Paginate.first model.filteredCalls }, Cmd.none )
-
-        CallPage Last ->
-            ( { model | filteredCalls = Paginate.last model.filteredCalls }, Cmd.none )
-
-        CallPage Next ->
-            ( { model | filteredCalls = Paginate.next model.filteredCalls }, Cmd.none )
-
-        CallPage Prev ->
-            ( { model | filteredCalls = Paginate.prev model.filteredCalls }, Cmd.none )
-
-        CallPage (GoTo n) ->
-            ( { model | filteredCalls = Paginate.goTo n model.filteredCalls }, Cmd.none )
-
-        ChangeCallPageSize size ->
-            let
-                sizeAsInt =
-                    Result.withDefault 10 <| String.toInt size
-            in
-            ( { model
-                | filteredCalls =
-                    let
-                        newPage =
-                            1 + (Paginate.currentPage model.filteredCalls - 1) * Paginate.itemsPerPage model.filteredCalls // sizeAsInt
-                    in
-                    Paginate.changeItemsPerPage sizeAsInt model.filteredCalls
-                        |> Paginate.goTo newPage
-              }
-            , Cmd.none
-            )
+import Types exposing (..)
 
 
 view : Model -> Html Msg
@@ -435,33 +320,6 @@ getCallStackUpwards trace call =
             Result.Err <| "Unexpected: more than one parents for a call: " ++ toString pp
 
 
-matchCalls : Maybe String -> Maybe Regex -> DebugTrace ProcessedCall -> List ( Int, ProcessedCall )
-matchCalls selectedFunction callFilter trace =
-    trace.calls
-        |> Array.toIndexedList
-        |> List.filter
-            (\( i, c ) ->
-                let
-                    filterByName =
-                        case selectedFunction of
-                            Nothing ->
-                                True
-
-                            Just n ->
-                                c.call.callFunction.name == n
-
-                    filterByCall =
-                        case callFilter of
-                            Nothing ->
-                                True
-
-                            Just r ->
-                                contains r c.searchString
-                in
-                filterByName && filterByCall
-            )
-
-
 {-| Returns a tuple of the result and the local values
 -}
 findCallDetails : DebugTrace a -> CallData -> Maybe ( String, List ( String, String ) )
@@ -532,38 +390,3 @@ processCall tr call =
 errorSpan : String -> Html msg
 errorSpan msg =
     span [ class "error" ] [ text msg ]
-
-
-main : Program (DebugTrace Value) Model Msg
-main =
-    Navigation.programWithFlags ChangeLocation
-        { init =
-            \tr loc ->
-                let
-                    unpackedTrace =
-                        traverseDebugTrace (decodeValue (callDataDecoder tr) >> Result.map (processCall tr)) tr
-
-                    callsPerPage0 =
-                        20
-                in
-                ( { trace = unpackedTrace
-                  , location = loc
-                  , selectedFunction = Maybe.Nothing
-                  , callFilter = Maybe.Nothing
-                  , filteredCalls = unpackedTrace |> Result.map (\x -> Array.toIndexedList x.calls) |> Result.withDefault [] |> Paginate.fromList callsPerPage0
-                  }
-                , Cmd.none
-                )
-        , subscriptions = \_ -> Sub.none
-        , view = view
-        , update = update
-        }
-
-
-type ParsedLocation
-    = SelectCall Int
-
-
-router : Location -> ParsedLocation
-router =
-    Maybe.withDefault (SelectCall 0) << parseHash (UrlParser.map SelectCall (UrlParser.s "call" </> int))
