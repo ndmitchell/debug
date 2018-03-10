@@ -40,14 +40,13 @@ type Msg
 
 
 type alias ProcessedCall =
-    { rendered : String, call : CallData }
+    { searchString : String, rendered : Html Msg, call : CallData }
 
 
 type alias Model =
     { location : Location
     , selectedFunction : Maybe String
     , callFilter : Maybe Regex
-    , callsPerPage : Int
     , filteredCalls : PaginatedList ( Int, ProcessedCall )
     , trace : Result String (DebugTrace ProcessedCall)
     }
@@ -74,7 +73,7 @@ update msg model =
                         |> Result.toMaybe
                         |> Maybe.map (matchCalls selectedFunction model.callFilter)
                         |> Maybe.withDefault []
-                        |> Paginate.fromList model.callsPerPage
+                        |> Paginate.fromList (Paginate.itemsPerPage model.filteredCalls)
               }
             , Cmd.none
             )
@@ -94,7 +93,7 @@ update msg model =
                         |> Result.toMaybe
                         |> Maybe.map (matchCalls model.selectedFunction callFilter)
                         |> Maybe.withDefault []
-                        |> Paginate.fromList model.callsPerPage
+                        |> Paginate.fromList (Paginate.itemsPerPage model.filteredCalls)
               }
             , Cmd.none
             )
@@ -119,7 +118,17 @@ update msg model =
                 sizeAsInt =
                     Result.withDefault 10 <| String.toInt size
             in
-            ( { model | filteredCalls = Paginate.changeItemsPerPage sizeAsInt model.filteredCalls }, Cmd.none )
+            ( { model
+                | filteredCalls =
+                    let
+                        newPage =
+                            1 + (Paginate.currentPage model.filteredCalls - 1) * Paginate.itemsPerPage model.filteredCalls // sizeAsInt
+                    in
+                    Paginate.changeItemsPerPage sizeAsInt model.filteredCalls
+                        |> Paginate.goTo newPage
+              }
+            , Cmd.none
+            )
 
 
 view : Model -> Html Msg
@@ -140,6 +149,13 @@ viewCall model trace selectedCall =
 
         fun =
             processedCall |> Maybe.map (\processedCall -> processedCall.call.callFunction)
+
+        expander : Html msg -> List (Html msg) -> Html msg
+        expander top rest =
+            details [ attribute "open" "" ] (summary [] [ top ] :: rest)
+
+        section name =
+            expander (h2 [ style [ ( "display", "inline-block" ) ] ] [ text name ])
     in
     table [ style [ ( "height", "100%" ), ( "width", "100%" ) ] ]
         [ tr [] [ td [ colspan 3 ] [ h1 [] [ text "Haskell Debugger" ] ] ]
@@ -149,21 +165,22 @@ viewCall model trace selectedCall =
                 , viewCallList model trace
                 ]
             , td []
-                [ h2 [] [ text "Source" ]
-                , ul [ id "function-source" ]
-                    [ viewSource trace (Maybe.map (\x -> x.call) processedCall) ]
+                [ section "Source"
+                    [ ul [ id "function-source" ]
+                        [ viewSource trace (Maybe.map (\x -> x.call) processedCall) ]
+                    ]
                 ]
             ]
         , tr []
             [ td []
-                [ h2 [] [ text "Variables" ]
-                , viewVariables trace (Maybe.map (\x -> x.call) processedCall)
+                [ section "Variables"
+                    [ viewVariables trace (Maybe.map (\x -> x.call) processedCall) ]
                 ]
             ]
         , tr [ id "function-depends-section" ]
             [ td []
-                [ h2 [] [ text "Calls" ]
-                , viewCallStack trace (Maybe.map (\x -> x.call) processedCall)
+                [ section "Call stack"
+                    [ viewCallStack trace (Maybe.map (\x -> x.call) processedCall) ]
                 ]
             ]
         ]
@@ -172,28 +189,31 @@ viewCall model trace selectedCall =
 viewCallList : Model -> DebugTrace ProcessedCall -> Html Msg
 viewCallList model trace =
     let
-        itemsPerPageSelector =
-            div []
+        callsPerPageSelector =
+            div [ class "calls-per-page" ]
                 [ text "Showing"
-                , select [ onInput ChangeCallPageSize ]
-                    [ option [ value "10" ] [ text "10" ]
-                    , option [ value "20" ] [ text "20" ]
-                    , option [ value "50" ] [ text "50" ]
-                    , option [ value "100" ] [ text "100" ]
-                    , option [ value "1000" ] [ text "1000" ]
-                    ]
+                , let
+                    current =
+                        Paginate.itemsPerPage model.filteredCalls
+                  in
+                  select [ onInput ChangeCallPageSize ]
+                    ([ 10, 20, 30, 40, 50, 100, 1000 ]
+                        |> List.map
+                            (\n ->
+                                option [ value (toString n), selected (current == n) ] [ text (toString n) ]
+                            )
+                    )
                 , text "calls per page"
                 ]
 
-        prevButtons =
-            [ button [ onClick (CallPage First), disabled <| Paginate.isFirst model.filteredCalls ] [ text "<<" ]
-            , button [ onClick (CallPage Prev), disabled <| Paginate.isFirst model.filteredCalls ] [ text "<" ]
-            ]
+        prevButton =
+            button [ onClick (CallPage Prev), disabled <| Paginate.isFirst model.filteredCalls ] [ text "<" ]
 
-        nextButtons =
-            [ button [ onClick (CallPage Next), disabled <| Paginate.isLast model.filteredCalls ] [ text ">" ]
-            , button [ onClick (CallPage Last), disabled <| Paginate.isLast model.filteredCalls ] [ text ">>" ]
-            ]
+        nextButton =
+            button [ onClick (CallPage Next), disabled <| Paginate.isLast model.filteredCalls ] [ text ">" ]
+
+        numButtons =
+            span [] <| boundedPager 3 pagerButtonView model.filteredCalls
 
         pagerButtonView index isActive =
             button
@@ -207,7 +227,14 @@ viewCallList model trace =
                     ]
                 , onClick <| CallPage (GoTo index)
                 ]
-                [ text <| toString index ]
+                [ text <|
+                    toString index
+                        ++ (if isActive then
+                                " of " ++ toString (Paginate.totalPages model.filteredCalls)
+                            else
+                                ""
+                           )
+                ]
 
         functionNameSelector =
             select [ id "function-drop", style [ ( "width", "100%" ) ], onInput SelectFunction ]
@@ -231,12 +258,11 @@ viewCallList model trace =
     div [] <|
         [ functionNameSelector
         , nameFilterInput
-        , span [] [ text (toString (Paginate.length model.filteredCalls) ++ " calls matched.") ]
-        , itemsPerPageSelector
+        {- , callsPerPageSelector -}
+        , prevButton
+        , numButtons
+        , nextButton
         ]
-            ++ prevButtons
-            ++ [ span [] <| boundedPager 2 pagerButtonView model.filteredCalls ]
-            ++ nextButtons
             ++ [ ul [] (List.map callView <| Paginate.page model.filteredCalls) ]
 
 
@@ -263,9 +289,9 @@ boundedPager radius f p =
     List.range start end |> List.map (\i -> f i (i == center))
 
 
-viewCallLink : Int -> String -> Html Msg
+viewCallLink : Int -> Html Msg -> Html Msg
 viewCallLink index rendered =
-    a [ href ("#call/" ++ toString index) ] [ text rendered ]
+    a [ class "call-link", href ("#call/" ++ toString index) ] [ rendered ]
 
 
 viewVariables : DebugTrace a -> Maybe CallData -> Html Msg
@@ -278,10 +304,10 @@ viewVariables trace call =
             ul [ id "function-variables" ]
                 (case findCallDetails trace call of
                     Just ( res, vals ) ->
-                        li [] [ pre [] [ text <| "$result = " ++ res ] ]
+                        li [] [ pre [] (renderSource (\_ -> Nothing) <| "$result = " ++ res) ]
                             :: List.map
                                 (\( n, v ) ->
-                                    li [] [ pre [] [ text (n ++ " = " ++ v) ] ]
+                                    li [] [ pre [] (renderSource (\_ -> Nothing) (n ++ " = " ++ v)) ]
                                 )
                                 vals
 
@@ -304,14 +330,14 @@ viewCallStack trace call =
                 Result.Ok callstack ->
                     let
                         upwards =
-                            List.foldl buildCallStackList (\k -> ul [ id "function-depends" ] [ k ]) (List.reverse callstack)
+                            List.foldl buildCallStackList (\k -> ul [] [ k ]) (List.reverse callstack)
 
                         descendants =
-                            call.callDepends |> List.map (\i -> ( i, Array.get i trace.calls |> Maybe.map (\x -> x.rendered) |> Maybe.withDefault "Corrupt trace" ))
+                            call.callDepends |> List.map (\i -> ( i, Array.get i trace.calls |> Maybe.map (\x -> x.rendered) |> Maybe.withDefault (text "Corrupt trace") ))
 
                         downwards =
-                            li []
-                                [ text (renderCall trace call)
+                            li [ id "function-depends-current" ]
+                                [ (processCall trace call).rendered
                                 , ul [] (descendants |> List.map (\x -> li [] [ uncurry viewCallLink x ]))
                                 ]
                     in
@@ -325,37 +351,46 @@ viewSource trace call =
             text "Corrupt trace: no call"
 
         Just call ->
-            let
-                loop src =
-                    case find (AtMost 1) hsLexer src of
-                        [] ->
+            pre [] (renderSource (getArg trace call) call.callFunction.source)
+
+
+renderSource : (String -> Maybe String) -> String -> List (Html msg)
+renderSource getArg =
+    let
+        loop src =
+            case find (AtMost 1) hsLexer src of
+                [] ->
+                    []
+
+                { match } :: _ ->
+                    case match of
+                        "" ->
                             []
 
-                        { match } :: _ ->
-                            case match of
-                                "" ->
-                                    []
+                        "where" ->
+                            span [ class "hs-keyword" ] [ text "where" ]
+                                :: loop (String.dropLeft 5 src)
 
-                                "where" ->
-                                    span [ class "hs-keyword" ] [ text "where" ]
-                                        :: loop (String.dropLeft (String.length match) src)
+                        "=" ->
+                            span [ class "hs-equals" ] [ text "=" ]
+                                :: loop (String.dropLeft 1 src)
 
-                                _ ->
-                                    (case String.indexes match symbols of
-                                        _ :: _ ->
-                                            span [ class "hs-keyglyph" ] [ text match ]
+                        _ ->
+                            (case String.indexes match symbols of
+                                _ :: _ ->
+                                    span [ class "hs-keyglyph" ] [ text match ]
 
-                                        [] ->
-                                            case getArg trace call match of
-                                                Just arg ->
-                                                    abbr [ title arg ] [ text match ]
+                                [] ->
+                                    case getArg match of
+                                        Just arg ->
+                                            abbr [ title arg ] [ text match ]
 
-                                                Nothing ->
-                                                    text match
-                                    )
-                                        :: loop (String.dropLeft (String.length match) src)
-            in
-            pre [] (loop call.callFunction.source)
+                                        Nothing ->
+                                            text match
+                            )
+                                :: loop (String.dropLeft (String.length match) src)
+    in
+    loop
 
 
 getArg :
@@ -382,12 +417,12 @@ symbols =
     """->:=()[]"""
 
 
-buildCallStackList : ( Int, String ) -> (Html Msg -> b) -> Html Msg -> b
+buildCallStackList : ( Int, Html Msg ) -> (Html Msg -> b) -> Html Msg -> b
 buildCallStackList call parent k =
     parent <| li [] [ uncurry viewCallLink call, ul [] [ k ] ]
 
 
-getCallStackUpwards : DebugTrace ProcessedCall -> CallData -> Result String (List ( Int, String ))
+getCallStackUpwards : DebugTrace ProcessedCall -> CallData -> Result String (List ( Int, Html Msg ))
 getCallStackUpwards trace call =
     case call.callParents of
         [ i ] ->
@@ -421,12 +456,14 @@ matchCalls selectedFunction callFilter trace =
                                 True
 
                             Just r ->
-                                contains r c.rendered
+                                contains r c.searchString
                 in
                 filterByName && filterByCall
             )
 
 
+{-| Returns a tuple of the result and the local values
+-}
 findCallDetails : DebugTrace a -> CallData -> Maybe ( String, List ( String, String ) )
 findCallDetails trace call =
     (call.callFunction.result :: call.callFunction.arguments)
@@ -451,19 +488,50 @@ findCallDetails trace call =
             )
 
 
-renderCall : DebugTrace a -> CallData -> String
-renderCall trace call =
-    case findCallDetails trace call of
-        Nothing ->
-            "Invalid trace: value null ref"
+renderCall : DebugFunction -> List ( String, String ) -> String -> Html arg
+renderCall callFunction args res =
+    div [ class "render-call" ] <|
+        text callFunction.name
+            :: List.filterMap
+                (\( name, v ) ->
+                    if String.startsWith "$arg" name then
+                        Just (printArg v)
+                    else
+                        Nothing
+                )
+                args
+            ++ [ span [ class "hs-equals" ] [ text " = " ]
+               , printArg res
+               ]
 
-        Just ( res, args ) ->
-            String.join " " <| call.callFunction.name :: List.map second args ++ [ " = ", res ]
+
+printArg : String -> Html arg
+printArg arg =
+    if String.length arg > 20 then
+        abbr [ class "render-arg", title arg ]
+            [ div [] (renderSource (\_ -> Nothing) (String.left 20 arg) ++ [ span [ class "hs-keyglyph" ] [ text ".." ] ]) ]
+    else
+        span [ class "render-arg" ] (renderSource (\_ -> Nothing) arg)
+
+
+mkSearchString : DebugFunction -> List ( String, String ) -> String -> String
+mkSearchString callFunction args res =
+    String.join " " <| callFunction.name :: List.map second args ++ [ " = ", res ]
 
 
 processCall : DebugTrace a -> CallData -> ProcessedCall
 processCall tr call =
-    { call = call, rendered = renderCall tr call }
+    case findCallDetails tr call of
+        Nothing ->
+            { call = call, rendered = errorSpan "Invalid trace: null ref", searchString = "" }
+
+        Just ( res, args ) ->
+            { call = call, rendered = renderCall call.callFunction args res, searchString = mkSearchString call.callFunction args res }
+
+
+errorSpan : String -> Html msg
+errorSpan msg =
+    span [ class "error" ] [ text msg ]
 
 
 main : Program (DebugTrace Value) Model Msg
@@ -474,13 +542,15 @@ main =
                 let
                     unpackedTrace =
                         traverseDebugTrace (decodeValue (callDataDecoder tr) >> Result.map (processCall tr)) tr
+
+                    callsPerPage0 =
+                        20
                 in
                 ( { trace = unpackedTrace
                   , location = loc
                   , selectedFunction = Maybe.Nothing
                   , callFilter = Maybe.Nothing
-                  , filteredCalls = unpackedTrace |> Result.map (\x -> Array.toIndexedList x.calls) |> Result.withDefault [] |> Paginate.fromList 10
-                  , callsPerPage = 10
+                  , filteredCalls = unpackedTrace |> Result.map (\x -> Array.toIndexedList x.calls) |> Result.withDefault [] |> Paginate.fromList callsPerPage0
                   }
                 , Cmd.none
                 )
