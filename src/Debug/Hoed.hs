@@ -103,6 +103,7 @@ import           GHC.Exts                    (IsList (..))
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
 import           System.Clock
+import           Prelude
 
 {-# ANN module ("hlint: ignore Redundant bracket" :: String) #-}
 
