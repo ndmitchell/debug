@@ -44,7 +44,7 @@ library
         aeson,
         containers,
         ghc-prim,
-        Hoed >= 0.5,
+        Hoed >= 0.5.1,
         libgraph >= 1.14,
         extra,
         deepseq,
