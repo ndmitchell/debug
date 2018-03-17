@@ -50,6 +50,7 @@ import Text.Show.Functions() -- Make sure the Show for functions instance exists
 import Web.Browser
 import Paths_debug
 import Text.PrettyPrint.ANSI.Leijen as PP hiding ((<$>), (<>))
+import Prelude
 
 
 -- | Metadata about a function, used to drive the HTML view.
