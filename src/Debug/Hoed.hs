@@ -78,7 +78,7 @@ import           Data.Char
 import           Data.Generics.Uniplate.Data
 import           Data.Graph.Libgraph
 import           Data.Hashable
-import qualified Data.HashMap.Monoidal       as HM
+import           Data.HashMap.Strict         (HashMap)
 import qualified Data.HashMap.Strict         as HMS
 import qualified Data.Map.Strict             as Map
 import qualified Data.HashSet                as Set
@@ -127,8 +127,6 @@ getDebugTrace hoedOptions program = do
   let compTime :: Double = fromIntegral(toNanoSecs(diffTimeSpec t t')) * 1e-9
   putStrLn $ "=== Debug Trace (" ++ show compTime ++ " seconds) ==="
   return result
-
-type a :-> b = HM.MonoidalHashMap a b
 
 data HoedFunctionKey = HoedFunctionKey
   { label   :: !Text
@@ -206,9 +204,9 @@ extractHoedCall _ _ = Nothing
 convert :: CompTree -> DebugTrace
 convert hoedCompTree = DebugTrace {..}
   where
-    hoedFunctionCalls :: Hashed HoedFunctionKey :-> [(HoedCallKey, HoedCallDetails)]
+    hoedFunctionCalls :: HashMap (Hashed HoedFunctionKey) [(HoedCallKey, HoedCallDetails)]
     hoedFunctionCalls =
-      HM.fromList
+      HMS.fromListWith (<>)
         [ (fnKey, [(callKey, callDetails)])
         | Just (fnKey, callKey, callDetails) <-
             map (extractHoedCall (annotateCompTree hoedCompTree)) (vertices hoedCompTree)
