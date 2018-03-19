@@ -1,5 +1,6 @@
 Changelog for Debug
 
+0.1.1, released 2018-03-19
     Switch the HTML to Elm, fixing a few minor bugs
     Expose a few more functions from Debug.Hoed
 0.1, released 2018-02-16
