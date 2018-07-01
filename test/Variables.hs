@@ -255,10 +255,9 @@ checkVars name expr = do
             case lookup name expectedVars of
                 Nothing -> fail $ "Can't find the list of expected variables for the function " ++ name
                 Just expected -> case checkEachVar vars expected of
-                    [] -> do
+                    [] ->
                         when (length vars /= length expected) $
                             fail $ "Expected " ++ show (length expected) ++ " variables, but found " ++ show (length vars)
-                        return ()
                     xs -> fail $ "\n" ++ unlines xs
 
 checkEachVar :: [(Text, Text)] -> [(Text, Text)] -> [String]
