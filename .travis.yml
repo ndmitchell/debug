@@ -4,7 +4,7 @@ matrix:
   include:
   - env: GHCVER=8.0.2
   - env: GHCVER=8.2.2
-  - env: GHCVER=8.4.3
+  - env: GHCVER=8.4.4
   - env: GHCVER=8.6.1
   - env: GHCVER=head
 
