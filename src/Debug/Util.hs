@@ -28,9 +28,7 @@ removeLet s =
 
 -- | Remove possible _n suffix from discovered function names
 removeExtraDigits :: String -> String
-removeExtraDigits str = case stripInfixEnd "_" str of
-    Just s  -> fst s
-    Nothing -> str
+removeExtraDigits str = maybe str fst (stripInfixEnd "_" str)
 
 -- | Trsansform infix operator into a valid variable name
 -- | For example "++"" ---> "plus_plus"
