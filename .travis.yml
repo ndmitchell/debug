@@ -1,12 +1,11 @@
 language: minimal
 
-matrix:
-  include:
-  - env: GHCVER=8.0
-  - env: GHCVER=8.2
-  - env: GHCVER=8.4
-  - env: GHCVER=8.6
-  - env: GHCVER=head
+env:
+- GHCVER=8.0
+- GHCVER=8.2
+- GHCVER=8.4
+- GHCVER=8.6
+- GHCVER=head
 
 script:
 - curl -sSL https://raw.github.com/ndmitchell/neil/master/travis.sh | sh
